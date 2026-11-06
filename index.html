@@ -944,7 +944,6 @@
 
       let companies = Object.keys(compMap);
 
-      // 기업 풀 검색어가 있을 경우 필터링
       if (poolSearchKeyword) {
         companies = companies.filter(c => c.toLowerCase().includes(poolSearchKeyword));
       }
@@ -1060,7 +1059,7 @@
       if (isAlwaysOpen(deadlineStr)) {
         return { 
           text: "D-∞", 
-          color: "bg-orange-50 text-orange-700 font-bold border border-orange-200", 
+          color: "bg-orange-100/80 text-orange-800 font-bold border border-orange-300", 
           diff: -999999,
           isExpired: false, 
           isUrgent: false,
@@ -1074,11 +1073,11 @@
       target.setHours(0,0,0,0);
       const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
 
-      if (diff < 0) return { text: "마감 아카이브", color: "bg-slate-100 text-slate-500 border border-slate-200", diff, isExpired: true, isUrgent: false, isAlways: false };
+      if (diff < 0) return { text: "마감 아카이브", color: "bg-slate-200 text-slate-800 font-bold border border-slate-300", diff, isExpired: true, isUrgent: false, isAlways: false };
       if (diff === 0) return { text: "D-Day (오늘)", color: "bg-red-500 text-white font-bold animate-pulse", diff, isExpired: false, isUrgent: true, isAlways: false };
-      if (diff <= 3) return { text: `D-${diff} 임박`, color: "bg-red-100 text-red-700 font-bold", diff, isExpired: false, isUrgent: true, isAlways: false };
-      if (diff <= 7) return { text: `D-${diff}`, color: "bg-amber-100 text-amber-800 font-semibold", diff, isExpired: false, isUrgent: true, isAlways: false };
-      return { text: `D-${diff}`, color: "bg-blue-50 text-blue-700 font-medium", diff, isExpired: false, isUrgent: false, isAlways: false };
+      if (diff <= 3) return { text: `D-${diff} 임박`, color: "bg-rose-100 text-rose-800 font-bold border border-rose-300", diff, isExpired: false, isUrgent: true, isAlways: false };
+      if (diff <= 7) return { text: `D-${diff}`, color: "bg-amber-100 text-amber-800 font-semibold border border-amber-300", diff, isExpired: false, isUrgent: true, isAlways: false };
+      return { text: `D-${diff}`, color: "bg-blue-50 text-blue-700 font-medium border border-blue-200", diff, isExpired: false, isUrgent: false, isAlways: false };
     }
 
     function getStatusBadge(status) {
@@ -1143,34 +1142,44 @@
         const displayRegion = normalizeRegion(job.region);
         const tag = companyTags[job.company.trim()] || null;
 
-        let borderClass = "border border-slate-200";
-        if (dday.isAlways) {
-          borderClass = "border-2 border-orange-500 shadow-sm shadow-orange-100 bg-orange-50/15";
-        } else if (!dday.isExpired && dday.isUrgent) {
-          borderClass = "border-2 border-red-500 shadow-sm shadow-red-100 bg-red-50/10";
-        } else if (dday.isExpired) {
-          borderClass = "border border-slate-200 opacity-75 bg-slate-50/50";
+        // 스타일링 로직:
+        // 1. 마감 공고: 검정 테두리 (border-2 border-slate-900) + 차분한 배경
+        // 2. 상시 공고: 채도 낮은 주황 배경 (bg-orange-50/50) + 주황 테두리
+        // 3. 마감 임박: 채도 낮은 빨강 배경 (bg-rose-50/60) + 빨강 테두리
+        let borderClass = "border border-slate-200 bg-white";
+        if (dday.isExpired) {
+          borderClass = "border-2 border-slate-900 bg-slate-50/70 shadow-xs";
+        } else if (dday.isAlways) {
+          borderClass = "border-2 border-orange-400/80 bg-orange-50/50 shadow-xs";
+        } else if (dday.isUrgent) {
+          borderClass = "border-2 border-rose-500 bg-rose-50/60 shadow-xs";
         }
 
         const deadlineText = dday.isAlways 
-          ? '<span class="text-orange-600 font-bold">채용 시 마감 (상시)</span>' 
-          : job.deadline;
+          ? '<span class="text-orange-700 font-bold">채용 시 마감 (상시)</span>' 
+          : (dday.isExpired ? `<span class="text-slate-900 font-bold">${job.deadline}</span>` : job.deadline);
 
         return `
-          <div class="bg-white rounded-xl ${borderClass} p-5 transition flex flex-col justify-between relative overflow-hidden">
-            ${dday.isAlways ? `
+          <div class="rounded-xl ${borderClass} p-5 transition flex flex-col justify-between relative overflow-hidden">
+            ${dday.isExpired ? `
+              <div class="absolute -top-1 -right-1">
+                <span class="bg-slate-900 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-bl-lg shadow-2xs flex items-center gap-1">
+                  <i class="fa-solid fa-lock"></i> 마감됨
+                </span>
+              </div>
+            ` : (dday.isAlways ? `
               <div class="absolute -top-1 -right-1">
                 <span class="bg-orange-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-bl-lg shadow-2xs flex items-center gap-1">
                   <i class="fa-solid fa-infinity"></i> 상시 채용
                 </span>
               </div>
-            ` : (!dday.isExpired && dday.isUrgent ? `
+            ` : (dday.isUrgent ? `
               <div class="absolute -top-1 -right-1">
-                <span class="bg-red-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-bl-lg shadow-2xs flex items-center gap-1">
+                <span class="bg-rose-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-bl-lg shadow-2xs flex items-center gap-1">
                   <i class="fa-solid fa-triangle-exclamation"></i> 마감 임박
                 </span>
               </div>
-            ` : '')}
+            ` : ''))}
 
             <div>
               <div class="flex items-start justify-between gap-2 mb-2 pr-6">
@@ -1185,13 +1194,13 @@
                 <span class="text-xs px-2.5 py-0.5 rounded-full ${dday.color} shrink-0">${dday.text}</span>
               </div>
 
-              <div class="flex items-center space-x-2 text-xs text-slate-500 mb-3">
+              <div class="flex items-center space-x-2 text-xs text-slate-600 mb-3">
                 <span class="flex items-center space-x-1"><i class="fa-solid fa-location-dot text-slate-400"></i> <span>${displayRegion}</span></span>
                 <span>•</span>
-                <span>${dday.isExpired ? '공고 마감' : '마감'}: <strong class="${dday.isAlways ? 'text-orange-600 font-bold' : (!dday.isExpired && dday.isUrgent ? 'text-red-600 font-bold' : '')}">${deadlineText}</strong></span>
+                <span>${dday.isExpired ? '공고 마감일' : '마감'}: <strong class="${dday.isAlways ? 'text-orange-700 font-bold' : (!dday.isExpired && dday.isUrgent ? 'text-rose-700 font-bold' : '')}">${deadlineText}</strong></span>
               </div>
 
-              <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg text-xs mb-3 border border-slate-100">
+              <div class="flex items-center justify-between p-2.5 bg-white/80 rounded-lg text-xs mb-3 border border-slate-200/80 shadow-2xs">
                 <div class="flex items-center space-x-2">
                   <span class="text-slate-500 font-medium">전형:</span>
                   ${getStatusBadge(job.status)}
@@ -1199,10 +1208,10 @@
                 ${job.appliedDate ? `<span class="text-[11px] text-slate-500 font-mono"><i class="fa-regular fa-calendar-check mr-1 text-emerald-600"></i>${job.appliedDate} 접수</span>` : ''}
               </div>
 
-              ${job.memo ? `<p class="text-xs text-slate-600 bg-blue-50/40 p-2 rounded-lg border border-blue-100/60 mb-3"><i class="fa-regular fa-note-sticky text-blue-500 mr-1"></i>${job.memo}</p>` : ''}
+              ${job.memo ? `<p class="text-xs text-slate-600 bg-white/90 p-2 rounded-lg border border-slate-200/80 mb-3 shadow-2xs"><i class="fa-regular fa-note-sticky text-blue-500 mr-1"></i>${job.memo}</p>` : ''}
 
               ${hasHistory ? `
-                <div class="mt-3 pt-3 border-t border-slate-100">
+                <div class="mt-3 pt-3 border-t border-slate-200/70">
                   <div class="flex items-center justify-between text-xs font-bold text-indigo-700 mb-2">
                     <span class="flex items-center space-x-1">
                       <i class="fa-solid fa-clock-rotate-left"></i>
@@ -1211,13 +1220,13 @@
                   </div>
                   <div class="space-y-1.5">
                     ${job.history.map(hist => `
-                      <div class="text-[11px] bg-indigo-50/50 p-2 rounded-md border border-indigo-100 flex items-center justify-between">
+                      <div class="text-[11px] bg-white/80 p-2 rounded-md border border-slate-200/70 flex items-center justify-between">
                         <div>
                           <span class="font-bold text-slate-700">[${hist.date}]</span>
                           <span class="text-slate-600 ml-1">${hist.title}</span>
                           ${hist.note ? `<span class="block text-[10px] text-slate-500 mt-0.5">• ${hist.note}</span>` : ''}
                         </div>
-                        <span class="text-[10px] font-semibold text-slate-600 bg-white px-1.5 py-0.5 rounded shadow-2xs">${hist.status}</span>
+                        <span class="text-[10px] font-semibold text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded shadow-2xs">${hist.status}</span>
                       </div>
                     `).join('')}
                   </div>
@@ -1225,7 +1234,7 @@
               ` : ''}
             </div>
 
-            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+            <div class="mt-4 pt-3 border-t border-slate-200/70 flex items-center justify-between text-xs">
               ${job.url ? `
                 <a href="${job.url}" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold flex items-center space-x-1">
                   <span>공고 원문 보기</span>
@@ -1234,11 +1243,11 @@
               ` : `<span></span>`}
               <div class="flex items-center space-x-1">
                 <!-- 공고 수정 버튼 -->
-                <button onclick="editJob('${job.id}')" title="공고 수정" class="text-slate-400 hover:text-blue-600 transition p-1.5 rounded-lg hover:bg-slate-100">
+                <button onclick="editJob('${job.id}')" title="공고 수정" class="text-slate-400 hover:text-blue-600 transition p-1.5 rounded-lg hover:bg-white/80">
                   <i class="fa-regular fa-pen-to-square"></i>
                 </button>
                 <!-- 공고 삭제 버튼 -->
-                <button onclick="deleteJob('${job.id}')" title="아카이브 삭제" class="text-slate-400 hover:text-red-500 transition p-1.5 rounded-lg hover:bg-slate-100">
+                <button onclick="deleteJob('${job.id}')" title="아카이브 삭제" class="text-slate-400 hover:text-red-500 transition p-1.5 rounded-lg hover:bg-white/80">
                   <i class="fa-regular fa-trash-can"></i>
                 </button>
               </div>
@@ -1322,7 +1331,7 @@
       const job = jobs[jobIndex];
       const todayStr = new Date().toISOString().slice(0, 10);
 
-      if (!confirm(`'${job.company} - ${job.title}' 공고를 마감 처리하시겠습니까?\n마감일이 오늘(${todayStr})로 기록되며, '역대 전체 아카이브' 탭으로 안전하게 보존·이동됩니다.`)) {
+      if (!confirm(`'${job.company} - ${job.title}' 공고를 마감 처리하시겠습니까?\n마감일이 오늘(${todayStr})로 기록되며, 검정 테두리와 함께 '역대 전체 아카이브' 탭으로 안전하게 보존·이동됩니다.`)) {
         return;
       }
 
