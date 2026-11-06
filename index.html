@@ -77,7 +77,7 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
+<body class="bg-slate-50 text-slate-800 min-h-screen" onclick="closeCompanyPopupOutside(event)">
 
   <!-- 상단 헤더 -->
   <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
@@ -211,7 +211,7 @@
             </g>
           </g>
 
-          <!-- 2. 서울 서남부권 (구 서울 서남 1구역) -->
+          <!-- 2. 서울 서남부권 -->
           <g class="region-group" id="grp-seoul-sw1" onclick="filterByRegion('서울 서남부권')">
             <path class="map-shape" fill="#cbd5e1"
                   d="M 280,185 C 310,160 355,160 380,175 C 390,195 440,200 450,225 C 405,245 360,240 330,225 C 295,220 280,200 280,185 Z" />
@@ -223,7 +223,7 @@
             </g>
           </g>
 
-          <!-- 3. 서울 남부권 (구 서울 서남 2구역) -->
+          <!-- 3. 서울 남부권 -->
           <g class="region-group" id="grp-seoul-sw2" onclick="filterByRegion('서울 남부권')">
             <path class="map-shape" fill="#cbd5e1"
                   d="M 325,230 C 360,245 405,248 450,228 C 470,250 495,280 500,315 C 450,335 410,325 365,305 C 330,295 320,260 325,230 Z" />
@@ -392,7 +392,7 @@
     </section>
 
     <!-- 선택 권역 역대 공고 등록 기업 아카이브 바 -->
-    <section class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-3">
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-3 relative">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-2">
           <div class="w-2 h-4 bg-indigo-600 rounded-full"></div>
@@ -401,10 +401,10 @@
           </h3>
           <span id="archive-company-count" class="text-xs bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full">0개사</span>
         </div>
-        <span class="text-[11px] text-slate-400">기업을 클릭하면 해당 기업의 역대 공고만 모아봅니다.</span>
+        <span class="text-[11px] text-slate-400">1회 클릭 시 상태 태그 팝업 | 2회 클릭 시 전체 공고 복귀</span>
       </div>
 
-      <div id="company-pool-container" class="flex flex-wrap gap-2 pt-1"></div>
+      <div id="company-pool-container" class="flex flex-wrap gap-2 pt-1 relative"></div>
     </section>
 
     <!-- 공고 목록 섹션 -->
@@ -537,6 +537,16 @@
     let currentMapView = 'capital';
     let currentArchiveTab = 'active';
 
+    // 기업별 상태 태그 ('check' | 'cross' | 'square' | null)
+    let companyTags = {};
+    try {
+      const savedTags = localStorage.getItem('my_company_tags');
+      if (savedTags) companyTags = JSON.parse(savedTags);
+    } catch(e) { companyTags = {}; }
+
+    // 현재 열려 있는 팝업 대상 회사명
+    let activePopupCompany = null;
+
     const CAPITAL_DETAILED_REGIONS = [
       '서울 강남권', '서울 서남부권', '서울 남부권', '서울 강북권',
       '수원시', '화성시(동탄)', '경기 남부 1구역', '경기 남부 2구역', '경기 남부 3구역', '인천광역시', '수도권 전체'
@@ -546,7 +556,6 @@
       return CAPITAL_DETAILED_REGIONS.includes(regionName);
     }
 
-    // 하위 호환 처리 포함 (구 명칭 '서울 서남 1구역', '서울 서남 2구역'도 인식)
     function normalizeRegion(name) {
       if (!name) return '';
       if (name === '서울 서남 1구역') return '서울 서남부권';
@@ -727,6 +736,7 @@
     function filterByRegion(region) {
       selectedRegion = normalizeRegion(region);
       selectedCompany = null;
+      activePopupCompany = null;
       const badge = document.getElementById('current-filter-badge');
       const resetBtn = document.getElementById('reset-filter-btn');
 
@@ -747,10 +757,80 @@
       renderPostings();
     }
 
-    function filterByCompany(comp) {
-      selectedCompany = selectedCompany === comp ? null : comp;
+    // 기업 클릭 핸들러 (1회 클릭 시 팝업 & 필터, 2회 클릭 시 전체 복귀)
+    function handleCompanyClick(event, comp) {
+      event.stopPropagation();
+
+      if (selectedCompany === comp) {
+        // 2회 클릭 시: 전체 공고로 복귀
+        selectedCompany = null;
+        activePopupCompany = null;
+      } else {
+        // 1회 클릭 시: 해당 기업 필터링 적용 및 팝업 토글
+        selectedCompany = comp;
+        activePopupCompany = comp;
+      }
+
       renderCompanyPool();
       renderPostings();
+    }
+
+    function closeCompanyPopupOutside(event) {
+      if (activePopupCompany && !event.target.closest('#company-pool-container')) {
+        activePopupCompany = null;
+        renderCompanyPool();
+      }
+    }
+
+    // 기업 상태 태그 설정 ('check' | 'cross' | 'square' | null)
+    function setCompanyTag(event, comp, tagType) {
+      event.stopPropagation();
+      if (companyTags[comp] === tagType || tagType === null) {
+        delete companyTags[comp];
+      } else {
+        companyTags[comp] = tagType;
+      }
+      localStorage.setItem('my_company_tags', JSON.stringify(companyTags));
+      renderCompanyPool();
+    }
+
+    // 기업 풀에서 기업 완전 삭제 (연계된 공고 D1 일괄 삭제)
+    async function deleteCompanyFromPool(event, comp) {
+      event.stopPropagation();
+      const targetJobs = jobs.filter(j => j.company.trim().toLowerCase() === comp.toLowerCase());
+      const msg = `'${comp}' 기업을 기업 풀에서 삭제하시겠습니까?\n등록된 관련 공고 ${targetJobs.length}건이 함께 완전히 삭제됩니다.`;
+      
+      if (!confirm(msg)) return;
+
+      // 1. D1 클라우드 서버에서 해당 기업의 공고들 삭제
+      for (const j of targetJobs) {
+        try {
+          await fetch(`/api/jobs?id=${j.id}`, { method: 'DELETE' });
+        } catch(e) {}
+      }
+
+      // 2. 로컬 메모리 및 태그 삭제
+      jobs = jobs.filter(j => j.company.trim().toLowerCase() !== comp.toLowerCase());
+      delete companyTags[comp];
+      localStorage.setItem('my_company_tags', JSON.stringify(companyTags));
+      localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
+
+      if (selectedCompany === comp) selectedCompany = null;
+      activePopupCompany = null;
+
+      refreshUI();
+      alert(`'${comp}' 기업 및 등록 공고가 성공적으로 삭제되었습니다.`);
+    }
+
+    function getTagBadgeHtml(tag) {
+      if (tag === 'check') {
+        return `<span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 font-black text-[10px] ml-0.5" title="지원 / 선호">✔</span>`;
+      } else if (tag === 'cross') {
+        return `<span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-100 text-red-600 font-black text-[10px] ml-0.5" title="제외 / 불합격">✖</span>`;
+      } else if (tag === 'square') {
+        return `<span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-900 font-black text-[9px] ml-0.5" title="보류 / 대기">■</span>`;
+      }
+      return '';
     }
 
     function highlightActiveMapRegions() {
@@ -819,16 +899,64 @@
       container.innerHTML = companies.map(comp => {
         const isSelected = selectedCompany === comp;
         const count = compMap[comp];
+        const currentTag = companyTags[comp] || null;
+        const isPopupOpen = activePopupCompany === comp;
+
         return `
-          <button onclick="filterByCompany('${comp}')" class="px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1.5 transition ${
-            isSelected 
-              ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' 
-              : 'bg-indigo-50/60 hover:bg-indigo-100 text-indigo-900 border-indigo-200/80'
-          }">
-            <i class="fa-regular fa-building text-[10px]"></i>
-            <span>${comp}</span>
-            <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-indigo-700 text-indigo-100' : 'bg-white text-indigo-600 border border-indigo-100'}">${count}건</span>
-          </button>
+          <div class="relative inline-block">
+            <!-- 기업 버튼 -->
+            <button onclick="handleCompanyClick(event, '${comp}')" class="px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1.5 transition ${
+              isSelected 
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-300' 
+                : 'bg-indigo-50/60 hover:bg-indigo-100 text-indigo-900 border-indigo-200/80'
+            }">
+              <i class="fa-regular fa-building text-[10px]"></i>
+              <span>${comp}</span>
+              ${getTagBadgeHtml(currentTag)}
+              <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-indigo-700 text-indigo-100' : 'bg-white text-indigo-600 border border-indigo-100'}">${count}건</span>
+            </button>
+
+            <!-- 상태 태그 & 삭제 팝업 메뉴 -->
+            ${isPopupOpen ? `
+              <div onclick="event.stopPropagation()" class="absolute left-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl shadow-xl p-2.5 w-60 text-xs flex flex-col space-y-2 animate-in fade-in zoom-in-95 duration-100">
+                <div class="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                  <span class="font-bold text-slate-800 truncate max-w-[150px]">${comp}</span>
+                  <span class="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">상태 태그 지정</span>
+                </div>
+
+                <!-- 3가지 아이콘 태그 선택 -->
+                <div class="grid grid-cols-3 gap-1.5 pt-0.5">
+                  <button onclick="setCompanyTag(event, '${comp}', 'check')" class="flex flex-col items-center justify-center p-1.5 rounded-lg border transition ${currentTag === 'check' ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-bold' : 'hover:bg-slate-50 border-slate-200 text-slate-600'}">
+                    <span class="text-base text-emerald-600">✔</span>
+                    <span class="text-[10px] mt-0.5">선호/지원</span>
+                  </button>
+                  <button onclick="setCompanyTag(event, '${comp}', 'cross')" class="flex flex-col items-center justify-center p-1.5 rounded-lg border transition ${currentTag === 'cross' ? 'bg-red-50 border-red-500 text-red-700 font-bold' : 'hover:bg-slate-50 border-slate-200 text-slate-600'}">
+                    <span class="text-base text-red-600">✖</span>
+                    <span class="text-[10px] mt-0.5">제외/서탈</span>
+                  </button>
+                  <button onclick="setCompanyTag(event, '${comp}', 'square')" class="flex flex-col items-center justify-center p-1.5 rounded-lg border transition ${currentTag === 'square' ? 'bg-slate-100 border-slate-800 text-slate-900 font-bold' : 'hover:bg-slate-50 border-slate-200 text-slate-600'}">
+                    <span class="text-base text-slate-900">■</span>
+                    <span class="text-[10px] mt-0.5">보류/대기</span>
+                  </button>
+                </div>
+
+                <!-- 태그 초기화 및 기업 삭제 액션 바 -->
+                <div class="flex items-center justify-between pt-1 border-t border-slate-100">
+                  ${currentTag ? `
+                    <button onclick="setCompanyTag(event, '${comp}', null)" class="text-[11px] text-slate-500 hover:text-slate-800 flex items-center space-x-1">
+                      <i class="fa-solid fa-rotate-left text-[10px]"></i>
+                      <span>태그 해제</span>
+                    </button>
+                  ` : `<span></span>`}
+
+                  <button onclick="deleteCompanyFromPool(event, '${comp}')" class="text-[11px] text-red-600 hover:text-red-700 font-medium flex items-center space-x-1 px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition">
+                    <i class="fa-regular fa-trash-can text-[10px]"></i>
+                    <span>기업 풀에서 삭제</span>
+                  </button>
+                </div>
+              </div>
+            ` : ''}
+          </div>
         `;
       }).join('');
     }
@@ -930,6 +1058,7 @@
         const dday = getDDay(job.deadline);
         const hasHistory = job.history && job.history.length > 0;
         const displayRegion = normalizeRegion(job.region);
+        const tag = companyTags[job.company.trim()] || null;
 
         let borderClass = "border border-slate-200";
         if (!dday.isExpired && dday.isUrgent) {
@@ -951,8 +1080,10 @@
             <div>
               <div class="flex items-start justify-between gap-2 mb-2 pr-6">
                 <div>
-                  <button onclick="filterByCompany('${job.company}')" class="text-xs font-bold text-indigo-700 hover:underline uppercase tracking-wider text-left">
-                    <i class="fa-regular fa-building mr-1"></i>${job.company}
+                  <button onclick="handleCompanyClick(event, '${job.company}')" class="text-xs font-bold text-indigo-700 hover:underline uppercase tracking-wider text-left inline-flex items-center gap-1">
+                    <i class="fa-regular fa-building"></i>
+                    <span>${job.company}</span>
+                    ${getTagBadgeHtml(tag)}
                   </button>
                   <h4 class="text-sm font-bold text-slate-900 mt-0.5 line-clamp-1">${job.title}</h4>
                 </div>
@@ -1122,7 +1253,7 @@
       closeModal();
     }
 
-    // 서버 D1 DB에서 공고 삭제 (DELETE)
+    // 서버 D1 DB에서 단일 공고 삭제 (DELETE)
     async function deleteJob(id) {
       if (confirm('이 공고를 클라우드 DB에서 완전히 삭제하시겠습니까?')) {
         try {
@@ -1136,7 +1267,11 @@
     }
 
     function exportData() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(jobs, null, 2));
+      const exportPayload = {
+        jobs,
+        companyTags
+      };
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", dataStr);
       downloadAnchor.setAttribute("download", `내일의지도_아카이브데이터_${new Date().toISOString().slice(0,10)}.json`);
@@ -1153,8 +1288,20 @@
       reader.onload = async function(e) {
         try {
           const imported = JSON.parse(e.target.result);
+          let importList = [];
+          
           if (Array.isArray(imported)) {
-            for (const item of imported) {
+            importList = imported;
+          } else if (imported.jobs && Array.isArray(imported.jobs)) {
+            importList = imported.jobs;
+            if (imported.companyTags) {
+              companyTags = { ...companyTags, ...imported.companyTags };
+              localStorage.setItem('my_company_tags', JSON.stringify(companyTags));
+            }
+          }
+
+          if (importList.length > 0) {
+            for (const item of importList) {
               item.region = normalizeRegion(item.region);
               await fetch('/api/jobs', {
                 method: 'POST',
@@ -1172,7 +1319,7 @@
       reader.readAsText(file);
     }
 
-    // 진입 시 서버 D1 데이터 즉시 로드
+    // 진입 시 서버 D1 데이터 로드
     loadJobsFromServer();
   </script>
 </body>
