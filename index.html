@@ -211,11 +211,11 @@
             </g>
           </g>
 
-          <!-- 2. 서울 서남 1구역 -->
-          <g class="region-group" id="grp-seoul-sw1" onclick="filterByRegion('서울 서남 1구역')">
+          <!-- 2. 서울 서남부권 (구 서울 서남 1구역) -->
+          <g class="region-group" id="grp-seoul-sw1" onclick="filterByRegion('서울 서남부권')">
             <path class="map-shape" fill="#cbd5e1"
                   d="M 280,185 C 310,160 355,160 380,175 C 390,195 440,200 450,225 C 405,245 360,240 330,225 C 295,220 280,200 280,185 Z" />
-            <text x="360" y="195" class="map-label-main">서울 서남 1구역</text>
+            <text x="360" y="195" class="map-label-main">서울 서남부권</text>
             <text x="360" y="210" class="map-label-sub">(강서·양천·영등포·동작)</text>
             <g class="region-badge" id="badge-seoul-sw1" transform="translate(415, 180)" style="display: none;">
               <circle class="badge-circle" cx="0" cy="0" r="10" />
@@ -223,11 +223,11 @@
             </g>
           </g>
 
-          <!-- 3. 서울 서남 2구역 -->
-          <g class="region-group" id="grp-seoul-sw2" onclick="filterByRegion('서울 서남 2구역')">
+          <!-- 3. 서울 남부권 (구 서울 서남 2구역) -->
+          <g class="region-group" id="grp-seoul-sw2" onclick="filterByRegion('서울 남부권')">
             <path class="map-shape" fill="#cbd5e1"
                   d="M 325,230 C 360,245 405,248 450,228 C 470,250 495,280 500,315 C 450,335 410,325 365,305 C 330,295 320,260 325,230 Z" />
-            <text x="415" y="275" class="map-label-main">서울 서남 2구역</text>
+            <text x="415" y="275" class="map-label-main">서울 남부권</text>
             <text x="415" y="290" class="map-label-sub">(구로·금천·관악)</text>
             <g class="region-badge" id="badge-seoul-sw2" transform="translate(470, 260)" style="display: none;">
               <circle class="badge-circle" cx="0" cy="0" r="10" />
@@ -306,7 +306,7 @@
             </g>
           </g>
 
-          <!-- 10. 화성시(동탄) - 둥글둥글한 곡선 블록 적용 -->
+          <!-- 10. 화성시(동탄) -->
           <g class="region-group" id="grp-dongtan" onclick="filterByRegion('화성시(동탄)')">
             <path class="map-shape" fill="#cbd5e1"
                   d="M 520,468 
@@ -476,8 +476,8 @@
               </optgroup>
               <optgroup label="서울 권역 (4개)">
                 <option value="서울 강남권">서울 강남권 (서초·강남·송파)</option>
-                <option value="서울 서남 1구역">서울 서남 1구역 (강서·양천·영등포·동작)</option>
-                <option value="서울 서남 2구역">서울 서남 2구역 (구로·금천·관악)</option>
+                <option value="서울 서남부권">서울 서남부권 (강서·양천·영등포·동작)</option>
+                <option value="서울 남부권">서울 남부권 (구로·금천·관악)</option>
                 <option value="서울 강북권">서울 강북권 (마포·용산·종로·중구·성동 등)</option>
               </optgroup>
               <optgroup label="기타 전국 광역권">
@@ -538,7 +538,7 @@
     let currentArchiveTab = 'active';
 
     const CAPITAL_DETAILED_REGIONS = [
-      '서울 강남권', '서울 서남 1구역', '서울 서남 2구역', '서울 강북권',
+      '서울 강남권', '서울 서남부권', '서울 남부권', '서울 강북권',
       '수원시', '화성시(동탄)', '경기 남부 1구역', '경기 남부 2구역', '경기 남부 3구역', '인천광역시', '수도권 전체'
     ];
 
@@ -546,12 +546,23 @@
       return CAPITAL_DETAILED_REGIONS.includes(regionName);
     }
 
+    // 하위 호환 처리 포함 (구 명칭 '서울 서남 1구역', '서울 서남 2구역'도 인식)
+    function normalizeRegion(name) {
+      if (!name) return '';
+      if (name === '서울 서남 1구역') return '서울 서남부권';
+      if (name === '서울 서남 2구역') return '서울 남부권';
+      return name;
+    }
+
     function matchesRegionFilter(jobRegion, targetFilter) {
       if (!targetFilter) return true;
-      if (targetFilter === '수도권 전체') {
-        return isCapitalRegion(jobRegion);
+      const normalizedJob = normalizeRegion(jobRegion);
+      const normalizedTarget = normalizeRegion(targetFilter);
+
+      if (normalizedTarget === '수도권 전체') {
+        return isCapitalRegion(normalizedJob);
       }
-      return jobRegion === targetFilter;
+      return normalizedJob === normalizedTarget;
     }
 
     // Cloudflare D1 서버 API에서 공고 목록 호출
@@ -626,8 +637,8 @@
       const badgeMapping = {
         '인천광역시': 'badge-incheon',
         '서울 강북권': 'badge-seoul-gb',
-        '서울 서남 1구역': 'badge-seoul-sw1',
-        '서울 서남 2구역': 'badge-seoul-sw2',
+        '서울 서남부권': 'badge-seoul-sw1',
+        '서울 남부권': 'badge-seoul-sw2',
         '서울 강남권': 'badge-seoul-gn',
         '경기 남부 1구역': 'badge-gyeonggi-s1',
         '경기 남부 2구역': 'badge-gyeonggi-s2',
@@ -644,8 +655,9 @@
       let totalCapitalActiveCount = 0;
 
       jobs.filter(j => !isExpired(j.deadline)).forEach(j => {
-        activeCounts[j.region] = (activeCounts[j.region] || 0) + 1;
-        if (isCapitalRegion(j.region)) {
+        const reg = normalizeRegion(j.region);
+        activeCounts[reg] = (activeCounts[reg] || 0) + 1;
+        if (isCapitalRegion(reg)) {
           totalCapitalActiveCount++;
         }
       });
@@ -713,14 +725,14 @@
     }
 
     function filterByRegion(region) {
-      selectedRegion = region;
+      selectedRegion = normalizeRegion(region);
       selectedCompany = null;
       const badge = document.getElementById('current-filter-badge');
       const resetBtn = document.getElementById('reset-filter-btn');
 
-      if (region) {
-        const count = jobs.filter(j => matchesRegionFilter(j.region, region)).length;
-        badge.innerText = `${region} (${count}건 아카이브)`;
+      if (selectedRegion) {
+        const count = jobs.filter(j => matchesRegionFilter(j.region, selectedRegion)).length;
+        badge.innerText = `${selectedRegion} (${count}건 아카이브)`;
         badge.className = "text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-0.5 rounded-full";
         resetBtn.classList.remove('hidden');
       } else {
@@ -748,8 +760,8 @@
       const mapping = {
         '인천광역시': 'grp-incheon',
         '서울 강북권': 'grp-seoul-gb',
-        '서울 서남 1구역': 'grp-seoul-sw1',
-        '서울 서남 2구역': 'grp-seoul-sw2',
+        '서울 서남부권': 'grp-seoul-sw1',
+        '서울 남부권': 'grp-seoul-sw2',
         '서울 강남권': 'grp-seoul-gn',
         '경기 남부 1구역': 'grp-gyeonggi-s1',
         '경기 남부 2구역': 'grp-gyeonggi-s2',
@@ -825,7 +837,7 @@
       const container = document.getElementById('quick-region-chips');
       const targetRegions = [
         "수도권 전체", "수원시", "화성시(동탄)", "서울 강남권", "경기 남부 3구역", "경기 남부 2구역", 
-        "경기 남부 1구역", "서울 서남 1구역", "서울 서남 2구역", "서울 강북권", 
+        "경기 남부 1구역", "서울 서남부권", "서울 남부권", "서울 강북권", 
         "인천광역시", "대전/충청권"
       ];
 
@@ -917,6 +929,7 @@
       listContainer.innerHTML = filtered.map(job => {
         const dday = getDDay(job.deadline);
         const hasHistory = job.history && job.history.length > 0;
+        const displayRegion = normalizeRegion(job.region);
 
         let borderClass = "border border-slate-200";
         if (!dday.isExpired && dday.isUrgent) {
@@ -947,7 +960,7 @@
               </div>
 
               <div class="flex items-center space-x-2 text-xs text-slate-500 mb-3">
-                <span class="flex items-center space-x-1"><i class="fa-solid fa-location-dot text-slate-400"></i> <span>${job.region}</span></span>
+                <span class="flex items-center space-x-1"><i class="fa-solid fa-location-dot text-slate-400"></i> <span>${displayRegion}</span></span>
                 <span>•</span>
                 <span>${dday.isExpired ? '공고 마감' : '마감'}: <strong class="${!dday.isExpired && dday.isUrgent ? 'text-red-600 font-bold' : ''}">${job.deadline}</strong></span>
               </div>
@@ -1028,9 +1041,10 @@
       const match = jobs.find(j => j.company.toLowerCase() === companyVal.toLowerCase());
       
       if (match) {
-        regionSelect.value = match.region;
+        const normRegion = normalizeRegion(match.region);
+        regionSelect.value = normRegion;
         bannerText.innerHTML = `
-          <span>'<strong>${match.company}</strong>' 등록 이력이 있습니다. 이전 권역(<strong>${match.region}</strong>)이 자동 선택되었습니다. 사업장이 다를 경우 아래 드롭다운에서 직접 변경하실 수 있습니다.</span>
+          <span>'<strong>${match.company}</strong>' 등록 이력이 있습니다. 이전 권역(<strong>${normRegion}</strong>)이 자동 선택되었습니다. 사업장이 다를 경우 아래 드롭다운에서 직접 변경하실 수 있습니다.</span>
         `;
         banner.classList.remove('hidden');
       } else {
@@ -1053,7 +1067,7 @@
       e.preventDefault();
       const company = document.getElementById('form-company').value.trim();
       const title = document.getElementById('form-title').value.trim();
-      const region = document.getElementById('form-region').value;
+      const region = normalizeRegion(document.getElementById('form-region').value);
       const deadline = document.getElementById('form-deadline').value;
       const url = document.getElementById('form-url').value.trim();
       const status = document.getElementById('form-status').value;
@@ -1141,6 +1155,7 @@
           const imported = JSON.parse(e.target.result);
           if (Array.isArray(imported)) {
             for (const item of imported) {
+              item.region = normalizeRegion(item.region);
               await fetch('/api/jobs', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
