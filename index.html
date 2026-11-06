@@ -166,7 +166,7 @@
             <span>거점별 채용 맵</span>
             <span id="current-filter-badge" class="text-xs bg-slate-100 text-slate-700 font-medium px-2.5 py-0.5 rounded-full">전체 구역</span>
           </h2>
-          <p class="text-xs text-slate-500 mt-0.5">구역을 클릭하면 해당 권역에 역대 공고를 올린 기업 리스트와 현재 채용 공고가 표시됩니다.</p>
+          <p class="text-xs text-slate-500 mt-0.5">구역을 클릭하면 해당 권역 기업과 공고가 필터링되며, 같은 구역을 다시 클릭하면 전체 구역으로 돌아옵니다.</p>
         </div>
 
         <div class="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
@@ -733,8 +733,17 @@
       highlightActiveMapRegions();
     }
 
+    // 지도 구역 및 칩 선택 (동일 구역 2회 클릭 시 전체로 복귀)
     function filterByRegion(region) {
-      selectedRegion = normalizeRegion(region);
+      const target = normalizeRegion(region);
+
+      // 이미 선택된 구역을 다시 클릭했거나 null을 넘겼을 때 전체 복귀
+      if (!target || selectedRegion === target) {
+        selectedRegion = null;
+      } else {
+        selectedRegion = target;
+      }
+
       selectedCompany = null;
       activePopupCompany = null;
       const badge = document.getElementById('current-filter-badge');
