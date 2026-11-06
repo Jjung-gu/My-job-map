@@ -531,9 +531,18 @@
           <textarea id="form-memo" rows="2" placeholder="예: 판교 바이오센터 연구동, 포트폴리오 ver2.1 첨부" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
         </div>
 
-        <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100">
-          <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">취소</button>
-          <button type="submit" id="form-submit-btn" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition">저장하기</button>
+        <!-- 하단 액션 버튼 바 (수정 모드 시 마감 처리 버튼 노출) -->
+        <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+          <div>
+            <button type="button" id="form-close-job-btn" onclick="archiveCurrentJobFromModal()" class="hidden px-3 py-2 text-xs font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-lg transition flex items-center space-x-1">
+              <i class="fa-solid fa-box-archive text-[11px]"></i>
+              <span>공고 마감 처리 (아카이브로 이동)</span>
+            </button>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">취소</button>
+            <button type="submit" id="form-submit-btn" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition">저장하기</button>
+          </div>
         </div>
       </form>
     </div>
@@ -1221,6 +1230,7 @@
       document.getElementById('form-edit-id').value = '';
       document.getElementById('modal-title').innerText = '새 채용 공고 등록';
       document.getElementById('form-submit-btn').innerText = '저장하기';
+      document.getElementById('form-close-job-btn').classList.add('hidden'); // 등록 시에는 마감 버튼 숨김
       document.getElementById('form-always-open').checked = false;
       toggleAlwaysOpen();
       document.getElementById('history-detect-banner').classList.add('hidden');
@@ -1236,6 +1246,7 @@
       document.getElementById('form-edit-id').value = job.id;
       document.getElementById('modal-title').innerText = '채용 공고 수정';
       document.getElementById('form-submit-btn').innerText = '수정 내용 반영';
+      document.getElementById('form-close-job-btn').classList.remove('hidden'); // 수정 시에만 마감 처리 버튼 노출
       document.getElementById('history-detect-banner').classList.add('hidden');
 
       document.getElementById('form-company').value = job.company;
@@ -1259,6 +1270,43 @@
       }
 
       document.getElementById('modal-backdrop').classList.remove('hidden');
+    }
+
+    // 수정 모달 내 '공고 마감 처리 (아카이브로 이동)' 핸들러
+    async function archiveCurrentJobFromModal() {
+      const editId = document.getElementById('form-edit-id').value.trim();
+      if (!editId) return;
+
+      const jobIndex = jobs.findIndex(j => j.id === editId);
+      if (jobIndex === -1) return;
+
+      const job = jobs[jobIndex];
+      const todayStr = new Date().toISOString().slice(0, 10);
+
+      if (!confirm(`'${job.company} - ${job.title}' 공고를 마감 처리하시겠습니까?\n마감일이 오늘(${todayStr})로 기록되며, '역대 전체 아카이브' 탭으로 안전하게 보존·이동됩니다.`)) {
+        return;
+      }
+
+      const updatedJob = {
+        ...job,
+        deadline: todayStr
+      };
+
+      try {
+        await fetch(`/api/jobs?id=${editId}`, { method: 'DELETE' });
+        await fetch('/api/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedJob)
+        });
+      } catch (e) {}
+
+      jobs[jobIndex] = updatedJob;
+      localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
+
+      refreshUI();
+      closeModal();
+      alert('공고가 마감 처리되어 역대 아카이브로 안전하게 이동되었습니다.');
     }
 
     function closeModal() {
@@ -1393,7 +1441,7 @@
 
     // 서버 D1 DB에서 단일 공고 삭제 (DELETE)
     async function deleteJob(id) {
-      if (confirm('이 공고를 클라우드 DB에서 완전히 삭제하시겠습니까?')) {
+      if (confirm('이 공고를 클라우드 DB에서 완전히 삭제하시겠습니까?\n(아카이브에 남기지 않고 영구 삭제됩니다)')) {
         try {
           await fetch(`/api/jobs?id=${id}`, { method: 'DELETE' });
         } catch (e) {}
