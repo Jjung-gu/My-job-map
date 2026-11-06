@@ -12,12 +12,14 @@
     
     .region-group { cursor: pointer; }
 
-    .map-shape {
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      stroke: #0f172a;
-      stroke-width: 2.2;
+    /* 퍼즐 피스 기본 스타일 */
+    .puzzle-piece {
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      stroke: #1e293b;
+      stroke-width: 2.5;
       stroke-linejoin: round;
       stroke-linecap: round;
+      filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.08));
     }
 
     .map-label-main {
@@ -32,25 +34,29 @@
     .map-label-sub {
       font-size: 10px;
       font-weight: 600;
-      fill: #334155;
+      fill: #475569;
       text-anchor: middle;
       pointer-events: none;
       user-select: none;
       transition: fill 0.2s ease;
     }
 
-    .region-group:hover .map-shape {
-      fill: #94a3b8 !important;
-      stroke: #000000 !important;
+    /* 퍼즐 조각 호버 인터랙션 (살짝 들리는 효과) */
+    .region-group:hover .puzzle-piece {
+      transform: translateY(-3px) scale(1.015);
+      transform-origin: center;
+      stroke: #0284c7 !important;
       stroke-width: 3.2;
-      filter: drop-shadow(0 4px 8px rgba(15, 23, 42, 0.25));
+      filter: drop-shadow(0 10px 15px rgba(2, 132, 199, 0.25));
     }
 
-    .region-group.active .map-shape {
-      fill: #3b82f6 !important;
+    /* 선택/활성화된 퍼즐 조각 (완전 밀착 및 하이라이트) */
+    .region-group.active .puzzle-piece {
+      fill: #2563eb !important;
       stroke: #1e3a8a !important;
       stroke-width: 3.5;
-      filter: drop-shadow(0 6px 12px rgba(37, 99, 235, 0.35));
+      transform: translateY(-2px);
+      filter: drop-shadow(0 8px 18px rgba(37, 99, 235, 0.38));
     }
     .region-group.active .map-label-main,
     .region-group.active .map-label-sub {
@@ -60,13 +66,12 @@
     .region-badge {
       pointer-events: none;
       user-select: none;
-      transition: transform 0.2s ease, opacity 0.2s ease;
     }
     .badge-circle {
       fill: #ef4444;
       stroke: #ffffff;
-      stroke-width: 1.5;
-      filter: drop-shadow(0 2px 4px rgba(239, 68, 68, 0.4));
+      stroke-width: 2;
+      filter: drop-shadow(0 2px 4px rgba(239, 68, 68, 0.45));
     }
     .badge-text {
       font-size: 11px;
@@ -74,6 +79,14 @@
       fill: #ffffff;
       text-anchor: middle;
       dominant-baseline: central;
+    }
+
+    /* 한강 수로 그라데이션 및 물결감 */
+    .river-flow {
+      stroke: url(#hanRiverGrad);
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 3px 6px rgba(14, 165, 233, 0.3));
     }
   </style>
 </head>
@@ -84,12 +97,12 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-          <i class="fa-solid fa-map-location-dot text-lg"></i>
+          <i class="fa-solid fa-puzzle-piece text-lg"></i>
         </div>
         <div>
           <div class="flex items-center space-x-2">
             <h1 class="text-lg font-bold text-slate-900 tracking-tight">내일의 지도</h1>
-            <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">Archive Edition</span>
+            <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">Puzzle Edition</span>
             <span id="sync-status-badge" class="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-medium px-2 py-0.5 rounded-full flex items-center gap-1">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> D1 클라우드 동기화
             </span>
@@ -158,180 +171,240 @@
       </div>
     </section>
 
-    <!-- 인터랙티브 지도 섹션 -->
+    <!-- 퍼즐 지도 섹션 -->
     <section class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden p-5">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
         <div>
           <h2 class="text-base font-bold text-slate-900 flex items-center space-x-2">
-            <span>거점별 채용 맵</span>
+            <span>수도권 거점 퍼즐 맵</span>
             <span id="current-filter-badge" class="text-xs bg-slate-100 text-slate-700 font-medium px-2.5 py-0.5 rounded-full">전체 구역</span>
           </h2>
-          <p class="text-xs text-slate-500 mt-0.5">구역을 클릭하면 해당 권역 기업과 공고가 필터링되며, 같은 구역을 다시 클릭하면 전체 구역으로 돌아옵니다.</p>
+          <p class="text-xs text-slate-500 mt-0.5">퍼즐 조각을 클릭하면 해당 권역 기업과 공고가 필터링되며, 다시 클릭하면 전체 구역으로 돌아옵니다.</p>
         </div>
 
         <div class="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
-          <button id="view-tab-capital" onclick="switchMapView('capital')" class="px-3 py-1.5 rounded-lg bg-white text-blue-600 shadow-xs transition">수도권 거점 상세</button>
+          <button id="view-tab-capital" onclick="switchMapView('capital')" class="px-3 py-1.5 rounded-lg bg-white text-blue-600 shadow-xs transition">수도권 퍼즐 상세</button>
           <button id="view-tab-national" onclick="switchMapView('national')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">전국 광역권</button>
         </div>
       </div>
 
       <!-- 지도 캔버스 영역 -->
-      <div class="relative w-full h-[400px] sm:h-[480px] bg-[#f8fafc] rounded-xl my-4 overflow-hidden border border-slate-200 flex items-center justify-center">
+      <div class="relative w-full h-[430px] sm:h-[500px] bg-gradient-to-b from-[#f8fafc] to-[#f1f5f9] rounded-xl my-4 overflow-hidden border border-slate-200 flex items-center justify-center">
 
-        <!-- 1. 수도권 거점 상세 지도 SVG -->
-        <svg id="svg-capital-view" viewBox="0 0 840 560" class="w-full h-full select-none">
-          <g fill="#ffffff" stroke="#94a3b8" stroke-width="1.5">
-            <path d="M 120,80 L 160,50 L 220,90 L 290,30 L 370,120 L 320,150 L 180,180 Z" />
-            <path d="M 290,30 L 380,20 L 460,70 L 440,110 L 370,120 Z" />
-            <text x="200" y="80" font-size="14" font-weight="800" fill="#0f172a">고양</text>
-            <text x="430" y="75" font-size="14" font-weight="800" fill="#0f172a">파주</text>
+        <!-- 1. 수도권 거점 퍼즐 뷰 SVG (외곽 구역 제거, 파란 한강, 퍼즐 조각 결합) -->
+        <svg id="svg-capital-view" viewBox="0 0 860 560" class="w-full h-full select-none">
+          <defs>
+            <!-- 한강 파란색 수로 그라데이션 -->
+            <linearGradient id="hanRiverGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#38bdf8" />
+              <stop offset="45%" stop-color="#0284c7" />
+              <stop offset="100%" stop-color="#0369a1" />
+            </linearGradient>
 
-            <path d="M 20,290 C 40,295 50,330 35,360 C 20,380 40,420 50,450 L 110,480 L 125,430 L 70,390 Z" />
-            <path d="M 140,440 L 210,490 L 220,535 L 290,520 L 285,465 L 205,435 Z" />
-            <text x="225" y="490" font-size="12" font-weight="700" fill="#475569" text-anchor="middle">화성시(남양)</text>
+            <!-- 퍼즐 조각용 소프트 파스텔 베이스 -->
+            <linearGradient id="puzzleBlue" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#f8fafc" />
+              <stop offset="100%" stop-color="#e2e8f0" />
+            </linearGradient>
+          </defs>
 
-            <path d="M 680,470 L 780,480 L 760,545 L 670,540 Z" />
-            <text x="730" y="525" font-size="12" font-weight="700" fill="#475569" text-anchor="middle">평택</text>
-          </g>
+          <!-- 1. 파란색 한강 줄기 (배경 퍼즐 사이에 흐르는 랜드마크) -->
+          <path class="river-flow"
+                d="M 100,225 
+                   C 190,230 235,215 285,188 
+                   C 335,160 380,150 435,185 
+                   C 485,215 530,230 585,210 
+                   C 645,185 710,135 810,150" 
+                fill="none" stroke-width="16" />
 
-          <!-- 한강 줄기 -->
-          <path d="M 120,210 C 200,225 240,220 280,185 C 320,150 380,140 440,180 C 480,210 520,230 580,210 C 640,190 710,130 790,145" 
-                fill="none" stroke="#64748b" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+          <!-- 한강 물결 하이라이트 센터라인 -->
+          <path d="M 105,225 
+                   C 192,230 235,215 285,188 
+                   C 335,160 380,150 435,185 
+                   C 485,215 530,230 585,210 
+                   C 645,185 710,135 805,150" 
+                fill="none" stroke="#bae6fd" stroke-width="3" stroke-linecap="round" opacity="0.8" />
 
-          <!-- 10대 인터랙티브 구역 및 숫자 배지 -->
-          <!-- 1. 인천광역시 -->
+          <!-- 2. 맞물리는 10대 퍼즐 조각 레이어 -->
+
+          <!-- [1] 인천광역시 (서측 퍼즐 블록) -->
           <g class="region-group" id="grp-incheon" onclick="filterByRegion('인천광역시')">
-            <path class="map-shape" fill="#cbd5e1"
-                  d="M 10,270 C 40,250 80,235 110,210 C 135,215 170,240 180,275 C 195,300 170,360 145,390 C 110,380 90,340 70,325 C 45,320 20,335 10,310 Z" />
+            <path class="puzzle-piece" fill="#e2e8f0"
+                  d="M 35,270 
+                     C 65,245 95,235 125,215 
+                     C 145,220 165,232 178,255 
+                     C 190,275 198,285 188,300 
+                     C 176,312 165,308 165,325 
+                     C 165,340 180,350 172,368 
+                     C 162,390 142,395 120,388 
+                     C 88,380 70,345 52,330 
+                     C 35,320 20,332 18,305 Z" />
             <text x="105" y="295" class="map-label-main">인천광역시</text>
             <g class="region-badge" id="badge-incheon" transform="translate(145, 275)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
+              <circle class="badge-circle" cx="0" cy="0" r="11" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
           </g>
 
-          <!-- 2. 서울 서남부권 -->
+          <!-- [2] 서울 강북권 (한강 북단 거대 퍼즐 피스) -->
+          <g class="region-group" id="grp-seoul-gb" onclick="filterByRegion('서울 강북권')">
+            <path class="puzzle-piece" fill="#e2e8f0"
+                  d="M 385,135 
+                     C 440,70 510,45 580,40 
+                     C 640,35 695,65 708,110 
+                     C 715,150 670,180 625,195 
+                     C 575,212 505,185 455,175 
+                     C 420,155 400,165 385,135 Z" />
+            <text x="550" y="112" class="map-label-main" style="font-size: 14px;">서울 강북권</text>
+            <text x="550" y="130" class="map-label-sub">(마포·용산·중구·종로·성동 등)</text>
+            <g class="region-badge" id="badge-seoul-gb" transform="translate(620, 95)" style="display: none;">
+              <circle class="badge-circle" cx="0" cy="0" r="11" />
+              <text class="badge-text" x="0" y="0">0</text>
+            </g>
+          </g>
+
+          <!-- [3] 서울 서남부권 (한강변 퍼즐 조각) -->
           <g class="region-group" id="grp-seoul-sw1" onclick="filterByRegion('서울 서남부권')">
-            <path class="map-shape" fill="#cbd5e1"
-                  d="M 280,185 C 310,160 355,160 380,175 C 390,195 440,200 450,225 C 405,245 360,240 330,225 C 295,220 280,200 280,185 Z" />
-            <text x="360" y="195" class="map-label-main">서울 서남부권</text>
-            <text x="360" y="210" class="map-label-sub">(강서·양천·영등포·동작)</text>
-            <g class="region-badge" id="badge-seoul-sw1" transform="translate(415, 180)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
+            <path class="puzzle-piece" fill="#e2e8f0"
+                  d="M 285,190 
+                     C 315,165 360,165 385,178 
+                     C 400,195 440,198 452,225 
+                     C 410,245 365,242 332,226 
+                     C 298,220 282,205 285,190 Z" />
+            <text x="362" y="196" class="map-label-main">서울 서남부권</text>
+            <text x="362" y="211" class="map-label-sub">(강서·양천·영등포·동작)</text>
+            <g class="region-badge" id="badge-seoul-sw1" transform="translate(420, 180)" style="display: none;">
+              <circle class="badge-circle" cx="0" cy="0" r="11" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
           </g>
 
-          <!-- 3. 서울 남부권 -->
+          <!-- [4] 서울 남부권 (서남2구역 대체: 구로·금천·관악 퍼즐) -->
           <g class="region-group" id="grp-seoul-sw2" onclick="filterByRegion('서울 남부권')">
-            <path class="map-shape" fill="#cbd5e1"
-                  d="M 325,230 C 360,245 405,248 450,228 C 470,250 495,280 500,315 C 450,335 410,325 365,305 C 330,295 320,260 325,230 Z" />
+            <path class="puzzle-piece" fill="#e2e8f0"
+                  d="M 330,230 
+                     C 365,245 410,248 452,228 
+                     C 475,250 495,280 502,315 
+                     C 452,335 412,325 368,305 
+                     C 332,295 322,260 330,230 Z" />
             <text x="415" y="275" class="map-label-main">서울 남부권</text>
             <text x="415" y="290" class="map-label-sub">(구로·금천·관악)</text>
             <g class="region-badge" id="badge-seoul-sw2" transform="translate(470, 260)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
+              <circle class="badge-circle" cx="0" cy="0" r="11" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
           </g>
 
-          <!-- 4. 서울 강북권 -->
-          <g class="region-group" id="grp-seoul-gb" onclick="filterByRegion('서울 강북권')">
-            <path class="map-shape" fill="#cbd5e1"
-                  d="M 370,125 C 430,70 500,45 570,40 C 630,35 690,65 700,110 C 705,150 660,180 620,195 C 570,215 500,185 450,175 C 395,145 375,135 370,125 Z" />
-            <text x="545" y="115" class="map-label-main">강북권</text>
-            <text x="545" y="132" class="map-label-sub">(마포·용산·중구·성동·종로·동대문·광진 등)</text>
-            <g class="region-badge" id="badge-seoul-gb" transform="translate(590, 100)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
-              <text class="badge-text" x="0" y="0">0</text>
-            </g>
-          </g>
-
-          <!-- 5. 서울 강남권 -->
+          <!-- [5] 서울 강남권 (서초·강남·송파 퍼즐 피스) -->
           <g class="region-group" id="grp-seoul-gn" onclick="filterByRegion('서울 강남권')">
-            <path class="map-shape" fill="#cbd5e1"
-                  d="M 455,225 C 505,185 575,210 620,195 C 655,220 670,265 650,305 C 595,330 550,325 505,310 C 490,270 470,245 455,225 Z" />
-            <text x="565" y="255" class="map-label-main">서울 강남권</text>
-            <text x="565" y="270" class="map-label-sub">(서초·강남·송파)</text>
-            <g class="region-badge" id="badge-seoul-gn" transform="translate(620, 240)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
+            <path class="puzzle-piece" fill="#e2e8f0"
+                  d="M 460,225 
+                     C 508,185 578,210 625,195 
+                     C 658,220 675,265 652,305 
+                     C 598,330 552,325 508,310 
+                     C 492,270 472,245 460,225 Z" />
+            <text x="568" y="255" class="map-label-main">서울 강남권</text>
+            <text x="568" y="270" class="map-label-sub">(서초·강남·송파)</text>
+            <g class="region-badge" id="badge-seoul-gn" transform="translate(625, 238)" style="display: none;">
+              <circle class="badge-circle" cx="0" cy="0" r="11" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
           </g>
 
-          <!-- 6. 경기 남부 1구역 -->
+          <!-- [6] 경기 남부 1구역 (부천·시흥·광명 맞물림 조각) -->
           <g class="region-group" id="grp-gyeonggi-s1" onclick="filterByRegion('경기 남부 1구역')">
-            <path class="map-shape" fill="#cbd5e1"
-                  d="M 180,275 C 220,235 270,210 325,230 C 320,260 330,290 310,315 C 290,345 260,375 220,380 C 185,385 160,340 180,275 Z" />
-            <text x="245" y="295" class="map-label-main">경기 남부 1구역</text>
-            <text x="245" y="310" class="map-label-sub">(부천·시흥·광명)</text>
+            <path class="puzzle-piece" fill="#e2e8f0"
+                  d="M 188,275 
+                     C 225,235 275,210 328,230 
+                     C 322,260 332,290 312,315 
+                     C 292,345 262,375 222,380 
+                     C 188,385 165,340 188,275 Z" />
+            <text x="250" y="295" class="map-label-main">경기 남부 1구역</text>
+            <text x="250" y="310" class="map-label-sub">(부천·시흥·광명)</text>
             <g class="region-badge" id="badge-gyeonggi-s1" transform="translate(295, 280)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
+              <circle class="badge-circle" cx="0" cy="0" r="11" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
           </g>
 
-          <!-- 7. 경기 남부 2구역 -->
+          <!-- [7] 경기 남부 2구역 (안양·과천·군포·의왕 조각) -->
           <g class="region-group" id="grp-gyeonggi-s2" onclick="filterByRegion('경기 남부 2구역')">
-            <path class="map-shape" fill="#cbd5e1"
-                  d="M 320,315 C 365,305 415,325 440,325 C 470,360 480,400 470,430 C 410,435 370,410 335,420 C 315,385 305,345 320,315 Z" />
-            <text x="405" y="365" class="map-label-main">경기 남부 2구역</text>
-            <text x="405" y="380" class="map-label-sub">(안양·과천·군포·의왕)</text>
+            <path class="puzzle-piece" fill="#e2e8f0"
+                  d="M 325,315 
+                     C 368,305 418,325 442,325 
+                     C 472,360 482,400 472,430 
+                     C 412,435 372,410 338,420 
+                     C 318,385 308,345 325,315 Z" />
+            <text x="408" y="365" class="map-label-main">경기 남부 2구역</text>
+            <text x="408" y="380" class="map-label-sub">(안양·과천·군포·의왕)</text>
             <g class="region-badge" id="badge-gyeonggi-s2" transform="translate(460, 350)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
+              <circle class="badge-circle" cx="0" cy="0" r="11" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
           </g>
 
-          <!-- 8. 경기 남부 3구역 -->
+          <!-- [8] 경기 남부 3구역 (성남·용인·하남 대형 퍼즐) -->
           <g class="region-group" id="grp-gyeonggi-s3" onclick="filterByRegion('경기 남부 3구역')">
-            <path class="map-shape" fill="#cbd5e1"
-                  d="M 625,195 C 675,215 725,245 745,305 C 720,375 700,435 670,465 C 595,470 550,440 515,415 C 485,385 490,340 510,315 C 555,325 600,325 650,305 C 665,260 650,225 625,195 Z" />
-            <text x="615" y="380" class="map-label-main">경기 남부 3구역</text>
-            <text x="615" y="395" class="map-label-sub">(성남·용인·하남)</text>
-            <g class="region-badge" id="badge-gyeonggi-s3" transform="translate(680, 365)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
+            <path class="puzzle-piece" fill="#e2e8f0"
+                  d="M 630,195 
+                     C 680,215 730,245 750,305 
+                     C 725,375 705,435 675,465 
+                     C 600,470 555,440 520,415 
+                     C 490,385 495,340 515,315 
+                     C 558,325 605,325 655,305 
+                     C 670,260 655,225 630,195 Z" />
+            <text x="620" y="380" class="map-label-main">경기 남부 3구역</text>
+            <text x="620" y="395" class="map-label-sub">(성남·용인·하남)</text>
+            <g class="region-badge" id="badge-gyeonggi-s3" transform="translate(685, 365)" style="display: none;">
+              <circle class="badge-circle" cx="0" cy="0" r="11" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
           </g>
 
-          <!-- 9. 수원시 -->
+          <!-- [9] 수원시 퍼즐 블록 -->
           <g class="region-group" id="grp-suwon" onclick="filterByRegion('수원시')">
-            <path class="map-shape" fill="#cbd5e1"
-                  d="M 335,420 C 380,410 425,435 470,430 C 490,440 510,480 500,535 C 430,550 375,540 345,510 C 330,475 330,445 335,420 Z" />
-            <text x="415" y="485" class="map-label-main" style="font-size: 15px;">수원시</text>
-            <g class="region-badge" id="badge-suwon" transform="translate(450, 470)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
+            <path class="puzzle-piece" fill="#e2e8f0"
+                  d="M 338,420 
+                     C 382,410 428,435 472,430 
+                     C 492,440 512,480 502,535 
+                     C 432,550 378,540 348,510 
+                     C 332,475 332,445 338,420 Z" />
+            <text x="418" y="485" class="map-label-main" style="font-size: 15px;">수원시</text>
+            <g class="region-badge" id="badge-suwon" transform="translate(455, 470)" style="display: none;">
+              <circle class="badge-circle" cx="0" cy="0" r="11" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
           </g>
 
-          <!-- 10. 화성시(동탄) -->
+          <!-- [10] 화성시(동탄) 퍼즐 콤팩트 블록 -->
           <g class="region-group" id="grp-dongtan" onclick="filterByRegion('화성시(동탄)')">
-            <path class="map-shape" fill="#cbd5e1"
-                  d="M 520,468 
-                     C 530,462 590,460 615,466 
-                     C 628,470 630,490 626,515 
-                     C 622,538 610,548 590,548 
-                     C 560,548 532,544 518,536 
-                     C 508,528 510,480 520,468 Z" />
-            <text x="568" y="503" class="map-label-main">동탄</text>
-            <text x="568" y="518" class="map-label-sub">(화성시)</text>
-            <g class="region-badge" id="badge-dongtan" transform="translate(605, 480)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
+            <path class="puzzle-piece" fill="#e2e8f0"
+                  d="M 524,468 
+                     C 535,460 595,458 620,465 
+                     C 632,470 635,492 630,518 
+                     C 625,540 612,550 592,550 
+                     C 562,550 534,545 520,536 
+                     C 510,528 512,480 524,468 Z" />
+            <text x="572" y="503" class="map-label-main">동탄</text>
+            <text x="572" y="518" class="map-label-sub">(화성시)</text>
+            <g class="region-badge" id="badge-dongtan" transform="translate(610, 480)" style="display: none;">
+              <circle class="badge-circle" cx="0" cy="0" r="11" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
           </g>
 
-          <g transform="translate(770, 30)">
-            <polygon points="15,0 24,30 15,24 6,30" fill="#000000" />
-            <text x="15" y="44" font-size="13" font-weight="900" fill="#000000" text-anchor="middle">N</text>
+          <!-- 방위 표시 (우측 상단 심플 나침반) -->
+          <g transform="translate(790, 25)">
+            <circle cx="15" cy="15" r="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+            <polygon points="15,4 20,20 15,16 10,20" fill="#0284c7" />
+            <text x="15" y="38" font-size="11" font-weight="900" fill="#0f172a" text-anchor="middle">N</text>
           </g>
         </svg>
 
         <!-- 2. 전국 광역권 뷰 SVG -->
         <svg id="svg-national-view" viewBox="0 0 960 520" class="w-full h-full select-none hidden">
           <g class="region-group" id="grp-nat-수도권" onclick="filterByRegion('수도권 전체')">
-            <path class="map-shape" fill="#cbd5e1" stroke="#0f172a" stroke-width="2"
+            <path class="puzzle-piece" fill="#e2e8f0"
                   d="M 260 70 C 380 50 440 80 430 185 C 390 220 280 230 230 190 C 210 130 230 90 260 70 Z" />
             <text x="325" y="145" class="map-label-main" style="font-size: 15px;">수도권 (서울/경기/인천)</text>
             <g class="region-badge" id="badge-nat-수도권" transform="translate(415, 130)" style="display: none;">
@@ -341,7 +414,7 @@
           </g>
 
           <g class="region-group" id="grp-nat-강원권" onclick="filterByRegion('강원권')">
-            <path class="map-shape" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"
+            <path class="puzzle-piece" fill="#f1f5f9"
                   d="M 445 60 C 600 40 660 70 640 180 C 580 200 480 195 440 170 C 425 120 430 80 445 60 Z" />
             <text x="535" y="125" class="map-label-main">강원권 (원주/춘천)</text>
             <g class="region-badge" id="badge-nat-강원권" transform="translate(605, 115)" style="display: none;">
@@ -351,7 +424,7 @@
           </g>
 
           <g class="region-group" id="grp-nat-대전충청" onclick="filterByRegion('대전/충청권')">
-            <path class="map-shape" fill="#cbd5e1" stroke="#0f172a" stroke-width="2"
+            <path class="puzzle-piece" fill="#e2e8f0"
                   d="M 255 210 C 420 195 470 220 460 310 C 410 340 310 345 235 315 C 220 260 235 225 255 210 Z" />
             <text x="345" y="270" class="map-label-main" style="font-size: 15px;">대전·충청 (오송/대덕)</text>
             <g class="region-badge" id="badge-nat-대전충청" transform="translate(425, 255)" style="display: none;">
@@ -361,7 +434,7 @@
           </g>
 
           <g class="region-group" id="grp-nat-경상권" onclick="filterByRegion('경상권')">
-            <path class="map-shape" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"
+            <path class="puzzle-piece" fill="#f1f5f9"
                   d="M 475 210 C 660 190 730 250 690 440 C 580 480 480 440 450 370 C 445 290 460 240 475 210 Z" />
             <text x="575" y="325" class="map-label-main">경상권 (대구/부산/포항)</text>
             <g class="region-badge" id="badge-nat-경상권" transform="translate(650, 310)" style="display: none;">
@@ -371,7 +444,7 @@
           </g>
 
           <g class="region-group" id="grp-nat-전라권" onclick="filterByRegion('전라권')">
-            <path class="map-shape" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"
+            <path class="puzzle-piece" fill="#f1f5f9"
                   d="M 230 325 C 380 320 430 340 420 460 C 370 495 260 500 200 465 C 195 400 210 350 230 325 Z" />
             <text x="315" y="410" class="map-label-main">전라권 (광주/전주/나주)</text>
             <g class="region-badge" id="badge-nat-전라권" transform="translate(390, 395)" style="display: none;">
@@ -937,7 +1010,6 @@
         companies = companies.filter(c => c.toLowerCase().includes(poolSearchKeyword));
       }
 
-      // 기업 풀 목록도 일관성 있게 가나다순 / a-z순 정렬
       companies.sort((a, b) => a.localeCompare(b, 'ko', { sensitivity: 'base' }));
 
       countBadge.innerText = `${companies.length}개사`;
@@ -1096,7 +1168,6 @@
       });
 
       if (currentArchiveTab === 'active') {
-        // [현재 채용 중 탭] 마감임박순 정렬 (상시 공고 최우선)
         filtered.sort((a, b) => {
           const ddayA = getDDay(a.deadline);
           const ddayB = getDDay(b.deadline);
@@ -1107,13 +1178,11 @@
           return ddayA.diff - ddayB.diff;
         });
       } else {
-        // [역대 전체 아카이브 탭] 회사명 기준 한글 가나다순, 영문 a-z순 정렬
         filtered.sort((a, b) => {
           const compA = (a.company || '').trim();
           const compB = (b.company || '').trim();
           const compCompare = compA.localeCompare(compB, 'ko', { sensitivity: 'base' });
           
-          // 회사명이 동일한 경우 최신 등록순으로 2차 정렬
           if (compCompare !== 0) return compCompare;
           return (b.id || '').localeCompare(a.id || '');
         });
