@@ -12,6 +12,7 @@
     
     .region-group { cursor: pointer; }
 
+    /* 직소 퍼즐 피스 기본 스타일 */
     .puzzle-piece {
       transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
       stroke: #334155;
@@ -41,6 +42,7 @@
       transition: fill 0.2s ease;
     }
 
+    /* 퍼즐 피스 호버 시 살짝 들려 올려지는 입체 효과 */
     .region-group:hover .puzzle-piece {
       fill: #cbd5e1 !important;
       stroke: #0284c7 !important;
@@ -50,6 +52,7 @@
       filter: drop-shadow(0 8px 16px rgba(2, 132, 199, 0.25));
     }
 
+    /* 선택/활성화된 퍼즐 피스 */
     .region-group.active .puzzle-piece {
       fill: #2563eb !important;
       stroke: #1e3a8a !important;
@@ -189,8 +192,8 @@
       <!-- 지도 캔버스 영역 -->
       <div class="relative w-full h-[450px] sm:h-[520px] bg-gradient-to-b from-slate-50 to-slate-100/70 rounded-xl my-4 overflow-hidden border border-slate-200 flex items-center justify-center">
 
-        <!-- 수도권 맞물리는 직소 퍼즐 SVG -->
-        <svg id="svg-capital-view" viewBox="0 0 880 540" class="w-full h-full select-none">
+        <!-- viewBox 여백 확장(-60 -40 1000 620): 원본 비율을 보존하면서 캔버스 안에서 전체 축소 배치 -->
+        <svg id="svg-capital-view" viewBox="-60 -40 1000 620" class="w-full h-full select-none">
           <defs>
             <linearGradient id="hanRiverGrad" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stop-color="#38bdf8" />
@@ -229,7 +232,7 @@
             </g>
           </g>
 
-          <!-- [3] 경기 남부 1구역 (텍스트 중앙 정렬) -->
+          <!-- [3] 경기 남부 1구역 -->
           <g class="region-group" id="grp-gyeonggi-s1" onclick="filterByRegion('경기 남부 1구역')">
             <path class="puzzle-piece"
                   d="M 170,210 C 210,195 250,195 285,210 C 292,225 282,238 298,248 C 315,258 322,238 335,252 C 342,260 338,275 330,290 C 320,310 325,325 310,345 C 290,370 250,380 215,382 C 185,385 162,382 158,382 C 172,350 185,325 190,305 C 194,292 216,295 216,275 C 216,255 194,258 190,245 C 184,225 178,213 170,210 Z" />
@@ -289,7 +292,7 @@
             </g>
           </g>
 
-          <!-- [8] 경기 남부 3구역 (동탄 맞물림 요철 반영) -->
+          <!-- [8] 경기 남부 3구역 -->
           <g class="region-group" id="grp-gyeonggi-s3" onclick="filterByRegion('경기 남부 3구역')">
             <path class="puzzle-piece"
                   d="M 640,195 C 700,210 765,245 785,310 C 760,380 730,445 690,475 C 650,475 628,452 612,452 C 595,452 590,432 575,432 C 560,432 555,455 540,455 C 525,455 515,445 498,435 C 502,420 480,418 480,402 C 480,385 505,385 502,360 C 500,335 495,315 488,300 C 505,295 518,295 528,328 C 540,335 550,322 565,325 C 610,335 655,328 668,308 C 675,290 695,295 695,275 C 695,255 675,260 668,242 C 660,220 648,205 640,195 Z" />
@@ -312,7 +315,7 @@
             </g>
           </g>
 
-          <!-- [10] 화성시(동탄) (경기 남부 3구역과 결합 체결) -->
+          <!-- [10] 화성시(동탄) -->
           <g class="region-group" id="grp-dongtan" onclick="filterByRegion('화성시(동탄)')">
             <path class="puzzle-piece"
                   d="M 522,460 C 535,455 545,435 560,435 C 575,435 580,455 595,455 C 610,455 628,475 645,475 C 648,495 642,518 638,530 C 628,545 612,548 590,548 C 560,548 532,542 520,532 C 512,512 515,480 522,460 Z" />
@@ -324,7 +327,8 @@
             </g>
           </g>
 
-          <g transform="translate(805, 25)">
+          <!-- 방위 표시 -->
+          <g transform="translate(830, 15)">
             <circle cx="15" cy="15" r="13" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
             <polygon points="15,5 19,19 15,16 11,19" fill="#0284c7" />
             <text x="15" y="38" font-size="11" font-weight="900" fill="#0f172a" text-anchor="middle">N</text>
@@ -597,9 +601,7 @@
       return normalizedJob === normalizedTarget;
     }
 
-    // 서버 D1 데이터 안전 로드 (기존 로컬 데이터 덮어쓰기 방어)
     async function loadJobsFromServer() {
-      // 1. 우선 로컬 데이터로 즉시 1차 화면 표시
       fallbackLocal();
       refreshUI();
 
@@ -607,14 +609,10 @@
         const res = await fetch('/api/jobs');
         if (res.ok) {
           const serverData = await res.json();
-          // 서버에서 유효한 배열을 받아온 경우에만 동기화
           if (Array.isArray(serverData)) {
             if (serverData.length > 0) {
               jobs = serverData;
               localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
-            } else if (jobs.length > 0) {
-              // 서버는 0건인데 로컬에 공고가 있는 경우: 로컬 데이터를 유지하고 서버로 업로드 대기
-              console.log('Local data preserved over empty server response');
             }
             updateSyncBadge(true);
           } else {
