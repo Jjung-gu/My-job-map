@@ -309,13 +309,18 @@
             </g>
           </g>
 
-          <!-- 10. 화성시(동탄) -->
+          <!-- 10. 화성시(동탄) - 둥글둥글한 유선형 블록 적용 -->
           <g class="region-group" id="grp-dongtan" onclick="filterByRegion('화성시(동탄)')">
             <path class="map-shape" fill="#cbd5e1"
-                  d="M 520,465 L 620,465 L 620,545 L 520,545 Z" />
-            <text x="570" y="505" class="map-label-main">동탄</text>
-            <text x="570" y="520" class="map-label-sub">(화성시)</text>
-            <g class="region-badge" id="badge-dongtan" transform="translate(605, 485)" style="display: none;">
+                  d="M 520,468 
+                     C 530,462 590,460 615,466 
+                     C 628,470 630,490 626,515 
+                     C 622,538 610,548 590,548 
+                     C 560,548 532,544 518,536 
+                     C 508,528 510,480 520,468 Z" />
+            <text x="568" y="503" class="map-label-main">동탄</text>
+            <text x="568" y="518" class="map-label-sub">(화성시)</text>
+            <g class="region-badge" id="badge-dongtan" transform="translate(605, 480)" style="display: none;">
               <circle class="badge-circle" cx="0" cy="0" r="10" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
@@ -820,7 +825,7 @@
       if (diff < 0) return { text: "마감 아카이브", color: "bg-slate-100 text-slate-500 border border-slate-200", diff, isExpired: true, isUrgent: false };
       if (diff === 0) return { text: "D-Day (오늘)", color: "bg-red-500 text-white font-bold animate-pulse", diff, isExpired: false, isUrgent: true };
       if (diff <= 3) return { text: `D-${diff} 임박`, color: "bg-red-100 text-red-700 font-bold", diff, isExpired: false, isUrgent: true };
-      if (diff <= 7) return { text: `D-${diff}`, color: "bg-amber-100 text-amber-800 font-semibold", diff, isExpired: false, isUrgent: true }; // 7일 이내 임박 처리
+      if (diff <= 7) return { text: `D-${diff}`, color: "bg-amber-100 text-amber-800 font-semibold", diff, isExpired: false, isUrgent: true };
       return { text: `D-${diff}`, color: "bg-blue-50 text-blue-700 font-medium", diff, isExpired: false, isUrgent: false };
     }
 
@@ -835,7 +840,6 @@
       }
     }
 
-    // [핵심 로직] 마감일 순 정렬 및 7일 이내 빨간색 테두리 칠하기
     function renderPostings() {
       const listContainer = document.getElementById('posting-list');
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -853,15 +857,13 @@
         return matchesRegion && matchesCompany && matchesSearch && matchesStatus && matchesTab;
       });
 
-      // 마감 얼마 안 남은 순서대로 정렬 (오름차순)
       if (currentArchiveTab === 'active') {
         filtered.sort((a, b) => {
           const ddayA = getDDay(a.deadline).diff;
           const ddayB = getDDay(b.deadline).diff;
-          return ddayA - ddayB; // 0일(오늘) -> 1일 -> 2일 순으로 먼저 노출
+          return ddayA - ddayB;
         });
       } else {
-        // 전체 아카이브에서는 최신 등록순 정렬 유지
         filtered.sort((a, b) => b.id.localeCompare(a.id));
       }
 
@@ -883,7 +885,6 @@
         const dday = getDDay(job.deadline);
         const hasHistory = job.history && job.history.length > 0;
 
-        // [핵심] 일주일 안쪽(0~7일) 남은 공고는 빨간색 테두리 적용
         let borderClass = "border border-slate-200";
         if (!dday.isExpired && dday.isUrgent) {
           borderClass = "border-2 border-red-500 shadow-sm shadow-red-100 bg-red-50/10";
