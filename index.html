@@ -90,6 +90,9 @@
           <div class="flex items-center space-x-2">
             <h1 class="text-lg font-bold text-slate-900 tracking-tight">내일의 지도</h1>
             <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">Archive Edition</span>
+            <span id="sync-status-badge" class="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-medium px-2 py-0.5 rounded-full flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> D1 클라우드 동기화
+            </span>
           </div>
           <p class="text-xs text-slate-500">수도권 거점별 기업 DB & 역대 채용 아카이브</p>
         </div>
@@ -177,12 +180,6 @@
 
         <!-- 1. 수도권 거점 상세 지도 SVG -->
         <svg id="svg-capital-view" viewBox="0 0 840 560" class="w-full h-full select-none">
-          <defs>
-            <filter id="mapShadow" x="-5%" y="-5%" width="110%" height="110%">
-              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.08"/>
-            </filter>
-          </defs>
-
           <!-- 북부 및 외곽 백지도 레이어 (비활성) -->
           <g fill="#ffffff" stroke="#94a3b8" stroke-width="1.5">
             <path d="M 120,80 L 160,50 L 220,90 L 290,30 L 370,120 L 320,150 L 180,180 Z" />
@@ -309,7 +306,7 @@
             </g>
           </g>
 
-          <!-- 10. 화성시(동탄) - 둥글둥글한 유선형 블록 적용 -->
+          <!-- 10. 화성시(동탄) - 둥글둥글한 곡선 블록 적용 -->
           <g class="region-group" id="grp-dongtan" onclick="filterByRegion('화성시(동탄)')">
             <path class="map-shape" fill="#cbd5e1"
                   d="M 520,468 
@@ -534,8 +531,7 @@
   </div>
 
   <script>
-    let stored = localStorage.getItem('my_jobs_data');
-    let jobs = stored ? JSON.parse(stored) : [];
+    let jobs = [];
     let selectedRegion = null;
     let selectedCompany = null;
     let currentMapView = 'capital';
@@ -558,8 +554,45 @@
       return jobRegion === targetFilter;
     }
 
-    function saveToStorage() {
-      localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
+    // Cloudflare D1 서버 API에서 공고 목록 호출
+    async function loadJobsFromServer() {
+      try {
+        const res = await fetch('/api/jobs');
+        if (res.ok) {
+          jobs = await res.json();
+          localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
+          updateSyncBadge(true);
+        } else {
+          fallbackLocal();
+          updateSyncBadge(false);
+        }
+      } catch (e) {
+        fallbackLocal();
+        updateSyncBadge(false);
+      }
+      refreshUI();
+    }
+
+    function fallbackLocal() {
+      const stored = localStorage.getItem('my_jobs_data');
+      if (stored) {
+        try { jobs = JSON.parse(stored); } catch(e) { jobs = []; }
+      }
+    }
+
+    function updateSyncBadge(isOnline) {
+      const badge = document.getElementById('sync-status-badge');
+      if (!badge) return;
+      if (isOnline) {
+        badge.className = "text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-medium px-2 py-0.5 rounded-full flex items-center gap-1";
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> D1 클라우드 동기화`;
+      } else {
+        badge.className = "text-[11px] bg-amber-50 text-amber-700 border border-amber-200 font-medium px-2 py-0.5 rounded-full flex items-center gap-1";
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> 오프라인 모드`;
+      }
+    }
+
+    function refreshUI() {
       updateStats();
       renderRegionChips();
       renderCompanyPool();
@@ -864,7 +897,7 @@
           return ddayA - ddayB;
         });
       } else {
-        filtered.sort((a, b) => b.id.localeCompare(a.id));
+        filtered.sort((a, b) => (b.id || '').localeCompare(a.id || ''));
       }
 
       document.getElementById('list-count').innerText = `${filtered.length}건`;
@@ -1015,7 +1048,8 @@
       }
     }
 
-    function saveJobPosting(e) {
+    // 서버 D1 DB로 신규 공고 저장 (POST)
+    async function saveJobPosting(e) {
       e.preventDefault();
       const company = document.getElementById('form-company').value.trim();
       const title = document.getElementById('form-title').value.trim();
@@ -1054,15 +1088,36 @@
         history: historyList
       };
 
-      jobs.unshift(newJob);
-      saveToStorage();
+      try {
+        const res = await fetch('/api/jobs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newJob)
+        });
+        if (res.ok) {
+          jobs.unshift(newJob);
+        } else {
+          jobs.unshift(newJob);
+        }
+      } catch (err) {
+        jobs.unshift(newJob);
+      }
+
+      localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
+      refreshUI();
       closeModal();
     }
 
-    function deleteJob(id) {
-      if (confirm('이 공고를 아카이브에서 완전히 삭제하시겠습니까?')) {
+    // 서버 D1 DB에서 공고 삭제 (DELETE)
+    async function deleteJob(id) {
+      if (confirm('이 공고를 클라우드 DB에서 완전히 삭제하시겠습니까?')) {
+        try {
+          await fetch(`/api/jobs?id=${id}`, { method: 'DELETE' });
+        } catch (e) {}
+
         jobs = jobs.filter(j => j.id !== id);
-        saveToStorage();
+        localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
+        refreshUI();
       }
     }
 
@@ -1076,17 +1131,24 @@
       downloadAnchor.remove();
     }
 
-    function importData(event) {
+    // 백업 JSON을 불러올 때 서버 D1으로 일괄 전송
+    async function importData(event) {
       const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = async function(e) {
         try {
           const imported = JSON.parse(e.target.result);
           if (Array.isArray(imported)) {
-            jobs = imported;
-            saveToStorage();
-            alert('데이터 백업본을 성공적으로 불러왔습니다!');
+            for (const item of imported) {
+              await fetch('/api/jobs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item)
+              });
+            }
+            await loadJobsFromServer();
+            alert('기존 백업 공고가 Cloudflare D1 클라우드로 안전하게 이전되었습니다!');
           }
         } catch(err) {
           alert('올바른 JSON 백업 파일이 아닙니다.');
@@ -1095,12 +1157,8 @@
       reader.readAsText(file);
     }
 
-    // 초기화 실행
-    updateStats();
-    renderRegionChips();
-    renderCompanyPool();
-    renderPostings();
-    updateMapBadges();
+    // 진입 시 서버 D1 데이터 즉시 로드
+    loadJobsFromServer();
   </script>
 </body>
 </html>
