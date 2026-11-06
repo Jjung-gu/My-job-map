@@ -393,7 +393,7 @@
 
     <!-- 선택 권역 역대 공고 등록 기업 아카이브 바 -->
     <section class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-3 relative">
-      <div class="flex items-center justify-between">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-100">
         <div class="flex items-center space-x-2">
           <div class="w-2 h-4 bg-indigo-600 rounded-full"></div>
           <h3 class="text-sm font-bold text-slate-900">
@@ -401,7 +401,15 @@
           </h3>
           <span id="archive-company-count" class="text-xs bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full">0개사</span>
         </div>
-        <span class="text-[11px] text-slate-400">1회 클릭 시 상태 태그 팝업 | 2회 클릭 시 전체 공고 복귀</span>
+
+        <!-- 기업 풀 전용 실시간 검색창 -->
+        <div class="flex items-center space-x-2">
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]"></i>
+            <input type="text" id="companyPoolSearchInput" oninput="renderCompanyPool()" placeholder="기업 풀 내 회사 검색..." class="pl-8 pr-3 py-1.5 text-xs bg-slate-50 hover:bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 w-44 sm:w-56 transition placeholder:text-slate-400">
+          </div>
+          <span class="hidden md:inline text-[11px] text-slate-400">클릭 시 해당 권역으로 지도 이동</span>
+        </div>
       </div>
 
       <div id="company-pool-container" class="flex flex-wrap gap-2 pt-1 relative"></div>
@@ -448,7 +456,6 @@
       </div>
 
       <form id="jobForm" onsubmit="saveJobPosting(event)" class="mt-4 space-y-4">
-        <!-- 수정 시 사용할 hidden ID -->
         <input type="hidden" id="form-edit-id" value="">
 
         <div>
@@ -531,7 +538,7 @@
           <textarea id="form-memo" rows="2" placeholder="예: 판교 바이오센터 연구동, 포트폴리오 ver2.1 첨부" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
         </div>
 
-        <!-- 하단 액션 버튼 바 (수정 모드 시 마감 처리 버튼 노출) -->
+        <!-- 하단 액션 버튼 바 -->
         <div class="flex items-center justify-between pt-3 border-t border-slate-100">
           <div>
             <button type="button" id="form-close-job-btn" onclick="archiveCurrentJobFromModal()" class="hidden px-3 py-2 text-xs font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-lg transition flex items-center space-x-1">
@@ -787,20 +794,38 @@
       renderPostings();
     }
 
-    // 기업 클릭 핸들러 (1회 클릭 시 팝업 & 필터, 2회 클릭 시 전체 복귀)
+    // 기업 클릭 핸들러 (어느 지역인지 파악하여 해당 권역으로 지도/필터 자동 이동)
     function handleCompanyClick(event, comp) {
       event.stopPropagation();
 
       if (selectedCompany === comp) {
+        // 이미 선택된 기업 2회 클릭: 전체 복귀
         selectedCompany = null;
         activePopupCompany = null;
+        filterByRegion(null);
       } else {
+        // 1회 클릭: 해당 회사의 첫 등록 공고 권역을 찾아 자동으로 해당 권역으로 전환
+        const matchedJob = jobs.find(j => j.company.trim().toLowerCase() === comp.toLowerCase());
+        if (matchedJob && matchedJob.region) {
+          const compRegion = normalizeRegion(matchedJob.region);
+          if (selectedRegion !== compRegion) {
+            selectedRegion = compRegion;
+            const badge = document.getElementById('current-filter-badge');
+            const resetBtn = document.getElementById('reset-filter-btn');
+            const count = jobs.filter(j => matchesRegionFilter(j.region, compRegion)).length;
+            badge.innerText = `${compRegion} (${count}건 아카이브)`;
+            badge.className = "text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-0.5 rounded-full";
+            resetBtn.classList.remove('hidden');
+            highlightActiveMapRegions();
+            renderRegionChips();
+          }
+        }
+
         selectedCompany = comp;
         activePopupCompany = comp;
+        renderCompanyPool();
+        renderPostings();
       }
-
-      renderCompanyPool();
-      renderPostings();
     }
 
     function closeCompanyPopupOutside(event) {
@@ -810,7 +835,7 @@
       }
     }
 
-    // 기업 상태 태그 설정 ('check' | 'cross' | 'square' | null)
+    // 기업 상태 태그 설정
     function setCompanyTag(event, comp, tagType) {
       event.stopPropagation();
       if (companyTags[comp] === tagType || tagType === null) {
@@ -822,7 +847,7 @@
       renderCompanyPool();
     }
 
-    // 기업 풀에서 기업 완전 삭제 (연계된 공고 D1 일괄 삭제)
+    // 기업 풀에서 기업 완전 삭제
     async function deleteCompanyFromPool(event, comp) {
       event.stopPropagation();
       const targetJobs = jobs.filter(j => j.company.trim().toLowerCase() === comp.toLowerCase());
@@ -893,10 +918,13 @@
       }
     }
 
+    // 기업 풀 렌더링 (전용 검색어 필터링 적용)
     function renderCompanyPool() {
       const container = document.getElementById('company-pool-container');
       const title = document.getElementById('archive-region-title');
       const countBadge = document.getElementById('archive-company-count');
+      const poolSearchInput = document.getElementById('companyPoolSearchInput');
+      const poolSearchKeyword = poolSearchInput ? poolSearchInput.value.trim().toLowerCase() : '';
 
       title.innerText = selectedRegion ? `'${selectedRegion}'` : '전체 구역';
 
@@ -905,18 +933,28 @@
         : jobs;
 
       const compMap = {};
+      const compRegionMap = {}; // 회사의 대표 소속 권역 저장
       targetJobs.forEach(j => {
         const c = j.company.trim();
         compMap[c] = (compMap[c] || 0) + 1;
+        if (!compRegionMap[c]) {
+          compRegionMap[c] = normalizeRegion(j.region);
+        }
       });
 
-      const companies = Object.keys(compMap);
+      let companies = Object.keys(compMap);
+
+      // 기업 풀 검색어가 있을 경우 필터링
+      if (poolSearchKeyword) {
+        companies = companies.filter(c => c.toLowerCase().includes(poolSearchKeyword));
+      }
+
       countBadge.innerText = `${companies.length}개사`;
 
       if (companies.length === 0) {
         container.innerHTML = `
           <div class="py-2 text-xs text-slate-400">
-            <i class="fa-regular fa-folder-closed mr-1"></i> 이 권역에 등록된 역대 기업 아카이브 로그가 아직 없습니다.
+            <i class="fa-regular fa-folder-closed mr-1"></i> ${poolSearchKeyword ? `'${poolSearchKeyword}' 검색 결과와 일치하는 기업이 없습니다.` : '이 권역에 등록된 역대 기업 아카이브 로그가 아직 없습니다.'}
           </div>
         `;
         return;
@@ -927,6 +965,7 @@
         const count = compMap[comp];
         const currentTag = companyTags[comp] || null;
         const isPopupOpen = activePopupCompany === comp;
+        const belongRegion = compRegionMap[comp] || '';
 
         return `
           <div class="relative inline-block">
@@ -935,7 +974,7 @@
               isSelected 
                 ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-300' 
                 : 'bg-indigo-50/60 hover:bg-indigo-100 text-indigo-900 border-indigo-200/80'
-            }">
+            }" title="클릭 시 소속 권역(${belongRegion})으로 이동">
               <i class="fa-regular fa-building text-[10px]"></i>
               <span>${comp}</span>
               ${getTagBadgeHtml(currentTag)}
@@ -946,8 +985,11 @@
             ${isPopupOpen ? `
               <div onclick="event.stopPropagation()" class="absolute left-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl shadow-xl p-2.5 w-60 text-xs flex flex-col space-y-2 animate-in fade-in zoom-in-95 duration-100">
                 <div class="flex items-center justify-between pb-1.5 border-b border-slate-100">
-                  <span class="font-bold text-slate-800 truncate max-w-[150px]">${comp}</span>
-                  <span class="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">상태 태그 지정</span>
+                  <div class="truncate max-w-[150px]">
+                    <span class="font-bold text-slate-800">${comp}</span>
+                    <span class="block text-[10px] text-slate-400 font-normal"><i class="fa-solid fa-location-dot mr-1"></i>${belongRegion}</span>
+                  </div>
+                  <span class="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">상태 태그</span>
                 </div>
 
                 <!-- 3가지 아이콘 태그 선택 -->
@@ -1019,7 +1061,7 @@
         return { 
           text: "D-∞", 
           color: "bg-orange-50 text-orange-700 font-bold border border-orange-200", 
-          diff: -999999, // 정렬 시 최상단 배치를 위한 음의 가중치
+          diff: -999999,
           isExpired: false, 
           isUrgent: false,
           isAlways: true
@@ -1072,11 +1114,9 @@
           const ddayA = getDDay(a.deadline);
           const ddayB = getDDay(b.deadline);
 
-          // 1순위: 채용시 마감(상시) 공고를 가장 앞쪽으로 우선 정렬
           if (ddayA.isAlways && !ddayB.isAlways) return -1;
           if (!ddayA.isAlways && ddayB.isAlways) return 1;
 
-          // 2순위: 일반 공고는 마감임박순 (남은 일수 오름차순)
           return ddayA.diff - ddayB.diff;
         });
       } else {
@@ -1103,7 +1143,6 @@
         const displayRegion = normalizeRegion(job.region);
         const tag = companyTags[job.company.trim()] || null;
 
-        // 테두리 클래스 정의 (채용시 마감은 주황색 굵은 테두리 적용)
         let borderClass = "border border-slate-200";
         if (dday.isAlways) {
           borderClass = "border-2 border-orange-500 shadow-sm shadow-orange-100 bg-orange-50/15";
@@ -1230,7 +1269,7 @@
       document.getElementById('form-edit-id').value = '';
       document.getElementById('modal-title').innerText = '새 채용 공고 등록';
       document.getElementById('form-submit-btn').innerText = '저장하기';
-      document.getElementById('form-close-job-btn').classList.add('hidden'); // 등록 시에는 마감 버튼 숨김
+      document.getElementById('form-close-job-btn').classList.add('hidden');
       document.getElementById('form-always-open').checked = false;
       toggleAlwaysOpen();
       document.getElementById('history-detect-banner').classList.add('hidden');
@@ -1246,7 +1285,7 @@
       document.getElementById('form-edit-id').value = job.id;
       document.getElementById('modal-title').innerText = '채용 공고 수정';
       document.getElementById('form-submit-btn').innerText = '수정 내용 반영';
-      document.getElementById('form-close-job-btn').classList.remove('hidden'); // 수정 시에만 마감 처리 버튼 노출
+      document.getElementById('form-close-job-btn').classList.remove('hidden');
       document.getElementById('history-detect-banner').classList.add('hidden');
 
       document.getElementById('form-company').value = job.company;
@@ -1314,7 +1353,6 @@
     }
 
     function checkCompanyHistory() {
-      // 수정 모드일 때는 이력 안내 배너 미출력
       if (document.getElementById('form-edit-id').value) return;
 
       const companyVal = document.getElementById('form-company').value.trim();
@@ -1366,7 +1404,6 @@
       const memo = document.getElementById('form-memo').value.trim();
 
       if (editId) {
-        // [수정 모드]
         const oldIndex = jobs.findIndex(j => j.id === editId);
         const oldJob = oldIndex !== -1 ? jobs[oldIndex] : {};
         const updatedJob = {
@@ -1382,7 +1419,6 @@
           memo
         };
 
-        // 1. 기존 공고 D1 삭제 후 갱신본 POST
         try {
           await fetch(`/api/jobs?id=${editId}`, { method: 'DELETE' });
           await fetch('/api/jobs', {
@@ -1394,7 +1430,6 @@
 
         if (oldIndex !== -1) jobs[oldIndex] = updatedJob;
       } else {
-        // [신규 등록 모드]
         const existing = jobs.find(j => j.company.toLowerCase() === company.toLowerCase());
         let historyList = [];
 
