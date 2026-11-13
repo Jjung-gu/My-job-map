@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-    body { font-family: 'Pretendard', sans-serif; }
+    body { font-family: 'Pretendard', sans-serif; scroll-behavior: smooth; }
     
     .region-group { cursor: pointer; }
 
@@ -205,8 +205,9 @@
   </div>
 
   <main id="main-content" class="locked-blur max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <!-- 상단 통계 카드 (클릭 시 해당 탭 전환 및 스크롤 연동) -->
     <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+      <div onclick="filterByStatCard('all')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:border-blue-400 transition">
         <div>
           <p class="text-xs text-slate-500 font-medium">누적 아카이브 기업</p>
           <p id="stat-companies" class="text-2xl font-bold text-slate-900 mt-1">0</p>
@@ -215,7 +216,7 @@
           <i class="fa-solid fa-building"></i>
         </div>
       </div>
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+      <div onclick="filterByStatCard('active')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:border-blue-400 transition">
         <div>
           <p class="text-xs text-slate-500 font-medium">현재 채용 진행 중</p>
           <p id="stat-active-jobs" class="text-2xl font-bold text-blue-600 mt-1">0</p>
@@ -224,7 +225,7 @@
           <i class="fa-solid fa-fire"></i>
         </div>
       </div>
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+      <div onclick="filterByStatCard('applied')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:border-emerald-400 transition">
         <div>
           <p class="text-xs text-slate-500 font-medium">내 지원 완료 / 전형 중</p>
           <p id="stat-applied" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
@@ -233,7 +234,7 @@
           <i class="fa-solid fa-paper-plane"></i>
         </div>
       </div>
-      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+      <div onclick="filterByStatCard('archived')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:border-slate-400 transition">
         <div>
           <p class="text-xs text-slate-500 font-medium">마감 보존 공고</p>
           <p id="stat-archived" class="text-2xl font-bold text-slate-600 mt-1">0</p>
@@ -244,7 +245,7 @@
       </div>
     </section>
 
-    <!-- 수도권 공고 현황 섹션 (명칭 개편 반영) -->
+    <!-- 수도권 공고 현황 섹션 -->
     <section class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden p-5">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
         <div>
@@ -399,12 +400,13 @@
       <div class="flex items-center space-x-1.5 overflow-x-auto pb-1 text-xs scrollbar-none" id="quick-region-chips"></div>
     </section>
 
+    <!-- 기업 풀 섹션 -->
     <section class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-3 relative">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-100">
         <div class="flex items-center space-x-2">
           <div class="w-2 h-4 bg-indigo-600 rounded-full"></div>
           <h3 class="text-sm font-bold text-slate-900">
-            <span id="archive-region-title">선택 권역</span> 역대 채용 등록 기업 풀 (Company Pool)
+            <span id="archive-region-title">선택 권역</span> 누적 아카이브 기업 풀 (Company Pool)
           </h3>
           <span id="archive-company-count" class="text-xs bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full">0개사</span>
         </div>
@@ -420,17 +422,19 @@
       <div id="company-pool-container" class="flex flex-wrap gap-2 pt-1 relative"></div>
     </section>
 
-    <!-- 공고 리스트 섹션 (상시공고 탭 추가 및 정렬) -->
-    <section class="space-y-4">
+    <!-- 공고 리스트 섹션 (탭 4개 체계 및 마감공고 회색톤 적용) -->
+    <section id="job-list-section" class="space-y-4 scroll-mt-20">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
         <div class="flex items-center space-x-3">
           <div class="flex items-center bg-slate-100 p-1 rounded-lg text-xs font-semibold overflow-x-auto">
             <button id="tab-active-only" onclick="setArchiveTab('active')" class="px-3 py-1.5 rounded-md bg-white text-blue-600 shadow-xs transition whitespace-nowrap">
-              <i class="fa-solid fa-bolt mr-1 text-amber-500"></i> 현재 채용 (마감임박순)
+              <i class="fa-solid fa-fire mr-1 text-blue-500"></i> 현재 채용
             </button>
-            <!-- 새로 추가된 상시공고 탭 -->
             <button id="tab-always-on" onclick="setArchiveTab('alwaysOn')" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap">
               <i class="fa-solid fa-infinity mr-1 text-indigo-500"></i> 상시공고
+            </button>
+            <button id="tab-archived" onclick="setArchiveTab('archived')" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap">
+              <i class="fa-solid fa-box-archive mr-1 text-slate-500"></i> 마감공고
             </button>
             <button id="tab-all-archive" onclick="setArchiveTab('all')" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap">
               <i class="fa-solid fa-arrow-down-a-z mr-1"></i> 역대 전체 아카이브
@@ -443,7 +447,6 @@
           <input type="text" id="searchInput" oninput="renderPostings()" placeholder="회사명, 직무 검색..." class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-48">
           <select id="statusFilter" onchange="renderPostings()" class="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none">
             <option value="ALL">내 전체 전형 상태</option>
-            <option value="관심">관심 공고</option>
             <option value="서류작성중">서류 작성 중</option>
             <option value="지원완료">지원 완료</option>
             <option value="1차면접">면접 전형</option>
@@ -456,7 +459,7 @@
     </section>
   </main>
 
-  <!-- 새 채용 공고 등록 모달 (기본값 관심체크 해제) -->
+  <!-- 새 채용 공고 등록 모달 -->
   <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -539,9 +542,8 @@
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">내 전형 상태 (기본: 관심)</label>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">내 전형 상태</label>
               <select id="form-status" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <option value="관심">⭐ 관심 공고</option>
                 <option value="서류작성중">✍️ 서류 작성 중</option>
                 <option value="지원완료">📩 지원 완료</option>
                 <option value="1차면접">💬 면접 전형</option>
@@ -676,7 +678,7 @@
     let selectedRegion = null;
     let selectedCompany = null;
     let currentMapView = 'capital';
-    let currentArchiveTab = 'active'; // 'active' | 'alwaysOn' | 'all'
+    let currentArchiveTab = 'active'; // 'active' | 'alwaysOn' | 'archived' | 'all'
     let companyTags = {};
     let activePopupCompany = null;
 
@@ -843,7 +845,6 @@
       refreshUI();
     }
 
-    // 회원 비밀번호 변경 모달 열기
     function openProfileModal() {
       if (!currentUser) return;
       document.getElementById('profile-modal-username').innerText = currentUser.username;
@@ -860,7 +861,6 @@
       document.getElementById('profile-modal').classList.remove('flex');
     }
 
-    // 회원 본인 비밀번호 변경 핸들러
     async function handleUserPasswordChange(e) {
       e.preventDefault();
       const currentPassword = document.getElementById('profile-current-pw').value.trim();
@@ -970,7 +970,6 @@
       } catch (e) {}
     }
 
-    // 관리자: 회원 비밀번호 0000 초기화 기능
     async function adminResetPassword0000(targetUserId, userNick) {
       if (!confirm(`[${userNick}] 회원의 비밀번호를 '0000'으로 초기화하시겠습니까?`)) return;
       try {
@@ -1097,7 +1096,6 @@
 
           if (list.length > 0) {
             jobs = list;
-            // 기존 공고들 중 관심 상태 초기화 마이그레이션 적용
             migrateClearInterestStatus();
             localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
           }
@@ -1111,15 +1109,15 @@
       refreshUI();
     }
 
-    // 기존 공고들의 '관심' 상태를 초기화하는 마이그레이션 함수
+    // 기존 '관심' 상태를 '서류작성중'으로 일괄 마이그레이션
     function migrateClearInterestStatus() {
-      const isMigrated = localStorage.getItem('my_job_map_interest_cleared_v3');
+      const isMigrated = localStorage.getItem('my_job_map_interest_cleared_v4');
       if (!isMigrated) {
         jobs = jobs.map(j => ({
           ...j,
           status: (j.status === '관심') ? '서류작성중' : (j.status || '서류작성중')
         }));
-        localStorage.setItem('my_job_map_interest_cleared_v3', 'true');
+        localStorage.setItem('my_job_map_interest_cleared_v4', 'true');
         localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
       }
     }
@@ -1220,21 +1218,42 @@
       }
     }
 
-    // 아카이브/상시공고 탭 전환 처리
+    // 상단 통계 카드 클릭 시 탭 및 스크롤 연동 기능
+    function filterByStatCard(cardType) {
+      if (cardType === 'active') {
+        setArchiveTab('active');
+      } else if (cardType === 'applied') {
+        setArchiveTab('active');
+        document.getElementById('statusFilter').value = '지원완료';
+      } else if (cardType === 'archived') {
+        setArchiveTab('archived');
+      } else if (cardType === 'all') {
+        setArchiveTab('all');
+      }
+      
+      // 리스트 영역으로 부드럽게 스크롤 이동
+      document.getElementById('job-list-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // 4개 탭 전환 처리 ('active' | 'alwaysOn' | 'archived' | 'all')
     function setArchiveTab(tab) {
       currentArchiveTab = tab;
       const tabActive = document.getElementById('tab-active-only');
       const tabAlwaysOn = document.getElementById('tab-always-on');
+      const tabArchived = document.getElementById('tab-archived');
       const tabAll = document.getElementById('tab-all-archive');
 
       tabActive.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap";
       tabAlwaysOn.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap";
+      tabArchived.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap";
       tabAll.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap";
 
       if (tab === 'active') {
         tabActive.className = "px-3 py-1.5 rounded-md bg-white text-blue-600 shadow-xs transition whitespace-nowrap";
       } else if (tab === 'alwaysOn') {
         tabAlwaysOn.className = "px-3 py-1.5 rounded-md bg-white text-indigo-600 shadow-xs transition whitespace-nowrap";
+      } else if (tab === 'archived') {
+        tabArchived.className = "px-3 py-1.5 rounded-md bg-slate-700 text-white shadow-xs transition whitespace-nowrap";
       } else {
         tabAll.className = "px-3 py-1.5 rounded-md bg-white text-blue-600 shadow-xs transition whitespace-nowrap";
       }
@@ -1452,7 +1471,7 @@
       const target = new Date(deadlineStr); target.setHours(0,0,0,0);
       const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
 
-      if (diff < 0) return { text: "마감 아카이브", color: "bg-slate-200 text-slate-800 font-bold border border-slate-300", diff, isExpired: true };
+      if (diff < 0) return { text: "마감 완료", color: "bg-slate-200 text-slate-700 font-bold border border-slate-300", diff, isExpired: true };
       if (diff === 0) return { text: "D-Day (오늘)", color: "bg-red-500 text-white font-bold animate-pulse", diff, isUrgent: true };
       if (diff <= 3) return { text: `D-${diff} 임박`, color: "bg-rose-100 text-rose-800 font-bold border border-rose-300", diff, isUrgent: true };
       if (diff <= 7) return { text: `D-${diff}`, color: "bg-amber-100 text-amber-800 font-semibold border border-amber-300", diff, isUrgent: true };
@@ -1461,16 +1480,15 @@
 
     function getStatusBadge(status) {
       switch(status) {
-        case '관심': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">관심 공고</span>';
         case '서류작성중': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">서류 작성 중</span>';
         case '지원완료': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">지원 완료</span>';
         case '1차면접': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">1차 면접 예정</span>';
         case '최종합격': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-600 text-white">최종 합격</span>';
-        default: return `<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700">${status}</span>`;
+        default: return `<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700">${status || '서류작성중'}</span>`;
       }
     }
 
-    // 공고 리스트 렌더링 (상시공고, 현재채용, 전체 아카이브 탭 분기 적용)
+    // 공고 리스트 렌더링 (마감공고 탭은 채도가 낮은 회색톤 적용, 지역 옆 마감일 표기)
     function renderPostings() {
       const listContainer = document.getElementById('posting-list');
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -1490,6 +1508,8 @@
           matchesTab = !always && !expired;
         } else if (currentArchiveTab === 'alwaysOn') {
           matchesTab = always;
+        } else if (currentArchiveTab === 'archived') {
+          matchesTab = !always && expired; // 마감공고 탭에는 마감된 공고만 모아서 표시
         } else if (currentArchiveTab === 'all') {
           matchesTab = true;
         }
@@ -1521,10 +1541,18 @@
         const appliedCnt = job.appliedCount || 0;
         const creator = job.createdBy || '관리자';
 
+        // 마감공고 탭이거나 이미 만료된 공고는 채도가 낮은 회색톤 디자인 적용
         let borderClass = "border border-slate-200 bg-white";
-        if (dday.isExpired) borderClass = "border-2 border-slate-900 bg-slate-50/70 shadow-xs";
-        else if (dday.isAlways) borderClass = "border-2 border-indigo-400/80 bg-indigo-50/40 shadow-xs";
-        else if (dday.isUrgent) borderClass = "border-2 border-rose-500 bg-rose-50/60 shadow-xs";
+        if (dday.isExpired || currentArchiveTab === 'archived') {
+          borderClass = "border border-slate-300 bg-slate-100/80 text-slate-600 shadow-2xs";
+        } else if (dday.isAlways) {
+          borderClass = "border-2 border-indigo-400/80 bg-indigo-50/40 shadow-xs";
+        } else if (dday.isUrgent) {
+          borderClass = "border-2 border-rose-500 bg-rose-50/60 shadow-xs";
+        }
+
+        // 지역 옆에 표시할 마감일 문자열 (상시가 아닐 경우)
+        const deadlineDateText = !isAlwaysOpen(job.deadline) ? `(~${job.deadline})` : '(상시)';
 
         return `
           <div class="rounded-xl ${borderClass} p-5 transition flex flex-col justify-between relative overflow-hidden">
@@ -1539,10 +1567,14 @@
                 <span class="text-xs px-2.5 py-0.5 rounded-full ${dday.color} shrink-0">${dday.text}</span>
               </div>
 
+              <!-- 지역 뱃지 바로 옆에 정확한 마감일 날짜 표기 -->
               <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 mb-3">
-                <span class="flex items-center space-x-1"><i class="fa-solid fa-location-dot text-slate-400"></i> <span>${displayRegion}</span></span>
+                <span class="flex items-center space-x-1.5">
+                  <i class="fa-solid fa-location-dot text-slate-400"></i>
+                  <span class="font-medium">${displayRegion}</span>
+                  <span class="text-[11px] text-slate-500 font-mono">${deadlineDateText}</span>
+                </span>
                 <div class="flex items-center space-x-1 text-[11px]">
-                  <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-semibold">⭐ 관심 ${interestCnt}</span>
                   <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">📩 지원 ${appliedCnt}</span>
                 </div>
               </div>
@@ -1584,7 +1616,7 @@
       }
     }
 
-    // 공고 등록 모달 열기 (기본값 설정)
+    // 공고 등록 모달 열기 (기본 상태를 '서류작성중'으로 설정)
     function openModal() {
       document.getElementById('jobForm').reset();
       document.getElementById('form-edit-id').value = '';
@@ -1592,7 +1624,7 @@
       document.getElementById('form-submit-btn').innerText = '저장하기';
       document.getElementById('form-close-job-btn').classList.add('hidden');
       document.getElementById('form-always-open').checked = false;
-      document.getElementById('form-status').value = '서류작성중'; // 기본값 관심 대신 서류작성중으로 설정
+      document.getElementById('form-status').value = '서류작성중'; 
       toggleAlwaysOpen();
       document.getElementById('history-detect-banner').classList.add('hidden');
       document.getElementById('modal-backdrop').classList.remove('hidden');
