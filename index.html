@@ -456,7 +456,7 @@
       <div class="flex items-center justify-between pb-3 border-b border-slate-100">
         <div>
           <h3 id="modal-title" class="text-base font-bold text-slate-900">새 채용 공고 등록</h3>
-          <p class="text-[11px] text-slate-400 mt-0.5">공고 정보는 전체 멤버에게 공유되며, 전형 상태와 메모는 내 계정에만 저장됩니다.</p>
+          <p class="text-[11px] text-slate-400 mt-0.5">공고 정보는 전체 멤버에게 공유됩니다.</p>
         </div>
         <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
@@ -465,12 +465,6 @@
         <input type="hidden" id="form-edit-id" value="">
 
         <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-[11px] font-extrabold text-slate-700 flex items-center gap-1">
-              <i class="fa-solid fa-share-nodes text-blue-600"></i> 공통 공고 정보 (전체 멤버 공유)
-            </span>
-          </div>
-
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1">회사명 *</label>
             <input type="text" id="form-company" required oninput="checkCompanyHistory()" placeholder="예: 한미약품, 유한양행" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
@@ -556,7 +550,7 @@
 
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1">내 비밀 메모 (타인 열람 불가)</label>
-            <textarea id="form-memo" rows="2" placeholder="자소서 v2 제출, 희망연봉 등 (나에게만 보입니다)" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+            <textarea id="form-memo" rows="2" placeholder="자소서 v2 제출, 희망연봉 등" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
           </div>
         </div>
 
@@ -564,7 +558,7 @@
           <div>
             <button type="button" id="form-close-job-btn" onclick="archiveCurrentJobFromModal()" class="hidden px-3 py-2 text-xs font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-lg transition flex items-center space-x-1">
               <i class="fa-solid fa-box-archive text-[11px]"></i>
-              <span>공고 마감 처리 (아카이브로 이동)</span>
+              <span>공고 마감 처리</span>
             </button>
           </div>
           <div class="flex items-center space-x-2">
@@ -576,7 +570,6 @@
     </div>
   </div>
 
-  <!-- 관리자 전용 모달 (아이디/닉네임 변경 및 회원/코드 관리) -->
   <div id="admin-modal-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto space-y-6">
       <div class="flex items-center justify-between pb-3 border-b border-slate-200">
@@ -586,10 +579,13 @@
           </div>
           <div>
             <h3 class="text-base font-extrabold text-slate-900">관리자 멤버십 & 계정 설정</h3>
-            <p class="text-[11px] text-slate-500">관리자 아이디/닉네임 변경, 초대코드 생성, 회원 승인/탈퇴를 관리합니다.</p>
+            <p class="text-[11px] text-slate-500">회원 정보를 수정하거나 초대코드를 관리합니다.</p>
           </div>
         </div>
-        <button onclick="closeAdminModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <div class="flex items-center space-x-2">
+          <button onclick="changeMyAdminAccount()" class="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 transition">관리자 계정 변경</button>
+          <button onclick="closeAdminModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
       </div>
 
       <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
@@ -647,9 +643,7 @@
       '수원시', '화성시(동탄)', '경기 남부 1구역', '경기 남부 2구역', '경기 남부 3구역', '인천광역시', '수도권 전체'
     ];
 
-    function isCapitalRegion(regionName) {
-      return CAPITAL_DETAILED_REGIONS.includes(regionName);
-    }
+    function isCapitalRegion(regionName) { return CAPITAL_DETAILED_REGIONS.includes(regionName); }
 
     function normalizeRegion(name) {
       if (!name) return '';
@@ -662,22 +656,15 @@
       if (!targetFilter) return true;
       const normalizedJob = normalizeRegion(jobRegion);
       const normalizedTarget = normalizeRegion(targetFilter);
-
-      if (normalizedTarget === '수도권 전체') {
-        return isCapitalRegion(normalizedJob);
-      }
+      if (normalizedTarget === '수도권 전체') return isCapitalRegion(normalizedJob);
       return normalizedJob === normalizedTarget;
     }
 
     function initAuth() {
       try {
         const savedUser = localStorage.getItem('my_job_map_user');
-        if (savedUser) {
-          currentUser = JSON.parse(savedUser);
-        }
-      } catch (e) {
-        currentUser = null;
-      }
+        if (savedUser) currentUser = JSON.parse(savedUser);
+      } catch (e) { currentUser = null; }
       applyAuthUI();
       loadJobsFromServer();
     }
@@ -720,13 +707,11 @@
       const tabReg = document.getElementById('auth-tab-register');
 
       if (tab === 'login') {
-        loginForm.classList.remove('hidden');
-        regForm.classList.add('hidden');
+        loginForm.classList.remove('hidden'); regForm.classList.add('hidden');
         tabLogin.className = "py-2 rounded-lg bg-white text-blue-600 shadow-xs transition";
         tabReg.className = "py-2 rounded-lg text-slate-600 hover:text-slate-900 transition";
       } else {
-        loginForm.classList.add('hidden');
-        regForm.classList.remove('hidden');
+        loginForm.classList.add('hidden'); regForm.classList.remove('hidden');
         tabReg.className = "py-2 rounded-lg bg-white text-indigo-600 shadow-xs transition";
         tabLogin.className = "py-2 rounded-lg text-slate-600 hover:text-slate-900 transition";
       }
@@ -746,19 +731,17 @@
           body: JSON.stringify({ username, password })
         });
         const data = await res.json();
-
         if (!res.ok) {
-          errBox.innerText = data.error || '로그인에 실패했습니다.';
+          errBox.innerText = data.error || '로그인 실패';
           errBox.classList.remove('hidden');
           return;
         }
-
         currentUser = data.user;
         localStorage.setItem('my_job_map_user', JSON.stringify(currentUser));
         applyAuthUI();
         await loadJobsFromServer();
       } catch (err) {
-        errBox.innerText = '서버와 통신할 수 없습니다.';
+        errBox.innerText = '서버 통신 오류';
         errBox.classList.remove('hidden');
       }
     }
@@ -779,21 +762,19 @@
           body: JSON.stringify({ inviteCode, username, nickname, password })
         });
         const data = await res.json();
-
         msgBox.classList.remove('hidden');
         if (!res.ok) {
           msgBox.className = "p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-medium";
           msgBox.innerText = data.error || '가입 신청 실패';
           return;
         }
-
         msgBox.className = "p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 font-bold";
         msgBox.innerText = data.message;
         document.getElementById('registerForm').reset();
       } catch (err) {
         msgBox.classList.remove('hidden');
         msgBox.className = "p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-medium";
-        msgBox.innerText = '서버 통신 오류가 발생했습니다.';
+        msgBox.innerText = '서버 통신 오류';
       }
     }
 
@@ -829,9 +810,7 @@
       await loadAdminData();
     }
 
-    function closeAdminModal() {
-      document.getElementById('admin-modal-backdrop').classList.add('hidden');
-    }
+    function closeAdminModal() { document.getElementById('admin-modal-backdrop').classList.add('hidden'); }
 
     async function loadAdminData() {
       if (!currentUser || currentUser.role !== 'admin') return;
@@ -862,24 +841,19 @@
           return `
             <tr class="${isPending ? 'bg-amber-50/60' : 'bg-white'}">
               <td class="py-2.5 px-3">
-                ${isAdmin 
-                  ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">👑 관리자</span>' 
-                  : (isPending 
-                    ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700">승인 대기</span>' 
-                    : '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">활동 승인</span>')}
+                ${isAdmin ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">👑 관리자</span>' : (isPending ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700">승인 대기</span>' : '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">활동 승인</span>')}
               </td>
               <td class="py-2.5 px-3 font-bold text-slate-800">${u.nickname} <span class="font-normal text-slate-400">(${u.username})</span></td>
               <td class="py-2.5 px-3 text-slate-600">${u.group_name || '-'}</td>
               <td class="py-2.5 px-3 text-slate-400 font-mono">${u.created_at || '-'}</td>
               <td class="py-2.5 px-3 text-right space-x-1">
                 ${isPending ? `<button onclick="manageUserAction('approve', '${u.id}')" class="px-2.5 py-1 bg-emerald-600 text-white font-bold rounded-md text-[11px]">승인</button>` : ''}
-                <button onclick="changeAdminAccount('${u.id}', '${u.username}', '${u.nickname}')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md text-[11px] font-semibold">아이디/비번변경</button>
+                <button onclick="editMemberAccount('${u.id}', '${u.username}', '${u.nickname}')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md text-[11px] font-semibold">정보수정</button>
                 ${!isAdmin ? `<button onclick="manageUserAction('delete_user', '${u.id}')" class="px-2 py-1 bg-red-50 text-red-600 rounded-md text-[11px]">탈퇴</button>` : ''}
               </td>
             </tr>
           `;
         }).join('');
-
         checkPendingUsersCount();
       } catch (e) {}
     }
@@ -888,7 +862,6 @@
       e.preventDefault();
       const groupName = document.getElementById('admin-group-name').value.trim();
       const customCode = document.getElementById('admin-custom-code').value.trim();
-
       try {
         const res = await fetch('/api/jobs?action=create_invite', {
           method: 'POST',
@@ -910,7 +883,6 @@
 
     async function manageUserAction(subAction, targetUserId, newUsername = '', newNickname = '', targetCode = '') {
       if (subAction === 'delete_user' && !confirm('해당 회원을 탈퇴 처리하시겠습니까?')) return;
-
       try {
         await fetch('/api/jobs?action=manage_user', {
           method: 'POST',
@@ -921,14 +893,15 @@
       } catch (e) {}
     }
 
-    async function changeAdminAccount(targetUserId, curUser, curNick) {
-      const newId = prompt('변경할 새로운 관리자 아이디를 입력하세요:', curUser);
+    // 일반 멤버의 아이디/닉네임/비밀번호 수정 (관리자는 로그아웃되지 않음)
+    async function editMemberAccount(targetUserId, curUser, curNick) {
+      const newId = prompt(`'${curNick}' 회원의 새로운 아이디를 입력하세요:`, curUser);
       if (!newId || !newId.trim()) return;
 
-      const newNick = prompt('변경할 닉네임을 입력하세요 (예: 관리자):', '관리자');
+      const newNick = prompt(`'${curNick}' 회원의 새로운 닉네임을 입력하세요:`, curNick);
       if (!newNick || !newNick.trim()) return;
 
-      const newPw = prompt('새로운 비밀번호를 입력하세요 (변경 원치 않으시면 취소 또는 기존 비번 입력):');
+      const newPw = prompt(`'${curNick}' 회원의 새로운 비밀번호를 입력하세요 (변경 원치 않으시면 취소):`);
 
       try {
         await fetch('/api/jobs?action=manage_user', {
@@ -956,58 +929,81 @@
           });
         }
 
-        alert('관리자 계정 정보가 성공적으로 변경되었습니다! 변경된 아이디로 다시 로그인해 주세요.');
+        alert(`'${newNick}' 회원의 정보가 성공적으로 수정되었습니다.`);
+        await loadAdminData(); // 관리자 창만 새로고침 (로그아웃 안 됨)
+      } catch (e) {
+        alert('회원 정보 수정 중 오류가 발생했습니다.');
+      }
+    }
+
+    // 관리자 본인의 계정(아이디/닉네임/비번) 변경 버튼 (모달 상단 우측)
+    async function changeMyAdminAccount() {
+      const newId = prompt('변경할 새로운 관리자 아이디를 입력하세요:', currentUser.username);
+      if (!newId || !newId.trim()) return;
+
+      const newNick = prompt('변경할 관리자 닉네임을 입력하세요:', currentUser.nickname);
+      if (!newNick || !newNick.trim()) return;
+
+      const newPw = prompt('새로운 비밀번호를 입력하세요 (변경 원치 않으시면 취소):');
+
+      try {
+        await fetch('/api/jobs?action=manage_user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            adminId: currentUser.id,
+            subAction: 'change_account',
+            targetUserId: currentUser.id,
+            newUsername: newId.trim(),
+            newNickname: newNick.trim()
+          })
+        });
+
+        if (newPw && newPw.trim()) {
+          await fetch('/api/jobs?action=manage_user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              adminId: currentUser.id,
+              subAction: 'reset_pw',
+              targetUserId: currentUser.id,
+              newPassword: newPw.trim()
+            })
+          });
+        }
+
+        alert('관리자 계정 정보가 변경되었습니다. 새 정보로 다시 로그인해 주세요.');
         logout();
       } catch (e) {
-        alert('계정 변경 중 오류가 발생했습니다.');
+        alert('관리자 계정 변경 중 오류가 발생했습니다.');
       }
     }
 
     async function loadJobsFromServer() {
       fallbackLocal();
       refreshUI();
-
       try {
         const uidParam = currentUser ? `?userId=${encodeURIComponent(currentUser.id)}` : '';
         const res = await fetch(`/api/jobs${uidParam}`);
         if (res.ok) {
           const serverData = await res.json();
           if (Array.isArray(serverData)) {
-            if (serverData.length > 0) {
-              jobs = serverData;
-              localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
-            }
+            if (serverData.length > 0) { jobs = serverData; localStorage.setItem('my_jobs_data', JSON.stringify(jobs)); }
             updateSyncBadge(true);
           } else if (serverData && Array.isArray(serverData.jobs)) {
-            if (serverData.jobs.length > 0) {
-              jobs = serverData.jobs;
-              localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
-            }
-            if (serverData.companyTags) {
-              companyTags = serverData.companyTags;
-            }
+            if (serverData.jobs.length > 0) { jobs = serverData.jobs; localStorage.setItem('my_jobs_data', JSON.stringify(jobs)); }
+            if (serverData.companyTags) companyTags = serverData.companyTags;
             updateSyncBadge(true);
-          } else {
-            updateSyncBadge(false);
-          }
-        } else {
-          updateSyncBadge(false);
-        }
-      } catch (e) {
-        updateSyncBadge(false);
-      }
+          } else { updateSyncBadge(false); }
+        } else { updateSyncBadge(false); }
+      } catch (e) { updateSyncBadge(false); }
       refreshUI();
     }
 
     function fallbackLocal() {
       const stored = localStorage.getItem('my_jobs_data');
       if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            jobs = parsed;
-          }
-        } catch(e) {}
+        try { const parsed = JSON.parse(stored); if (Array.isArray(parsed) && parsed.length > 0) jobs = parsed; } catch(e) {}
       }
     }
 
@@ -1032,16 +1028,12 @@
       highlightActiveMapRegions();
     }
 
-    function isAlwaysOpen(deadlineStr) {
-      return deadlineStr === '채용시마감' || deadlineStr === '상시채용' || !deadlineStr;
-    }
+    function isAlwaysOpen(deadlineStr) { return deadlineStr === '채용시마감' || deadlineStr === '상시채용' || !deadlineStr; }
 
     function isExpired(deadlineStr) {
       if (isAlwaysOpen(deadlineStr)) return false;
-      const today = new Date();
-      today.setHours(0,0,0,0);
-      const target = new Date(deadlineStr);
-      target.setHours(0,0,0,0);
+      const today = new Date(); today.setHours(0,0,0,0);
+      const target = new Date(deadlineStr); target.setHours(0,0,0,0);
       return (target - today) < 0;
     }
 
@@ -1059,64 +1051,37 @@
 
     function updateMapBadges() {
       const badgeMapping = {
-        '인천광역시': 'badge-incheon',
-        '서울 강북권': 'badge-seoul-gb',
-        '서울 서남부권': 'badge-seoul-sw1',
-        '서울 남부권': 'badge-seoul-sw2',
-        '서울 강남권': 'badge-seoul-gn',
-        '경기 남부 1구역': 'badge-gyeonggi-s1',
-        '경기 남부 2구역': 'badge-gyeonggi-s2',
-        '경기 남부 3구역': 'badge-gyeonggi-s3',
-        '수원시': 'badge-suwon',
-        '화성시(동탄)': 'badge-dongtan',
-        '강원권': 'badge-nat-강원권',
-        '대전/충청권': 'badge-nat-대전충청',
-        '경상권': 'badge-nat-경상권',
-        '전라권': 'badge-nat-전라권'
+        '인천광역시': 'badge-incheon', '서울 강북권': 'badge-seoul-gb', '서울 서남부권': 'badge-seoul-sw1',
+        '서울 남부권': 'badge-seoul-sw2', '서울 강남권': 'badge-seoul-gn', '경기 남부 1구역': 'badge-gyeonggi-s1',
+        '경기 남부 2구역': 'badge-gyeonggi-s2', '경기 남부 3구역': 'badge-gyeonggi-s3', '수원시': 'badge-suwon',
+        '화성시(동탄)': 'badge-dongtan', '강원권': 'badge-nat-강원권', '대전/충청권': 'badge-nat-대전충청',
+        '경상권': 'badge-nat-경상권', '전라권': 'badge-nat-전라권'
       };
 
       const activeCounts = {};
       let totalCapitalActiveCount = 0;
-
       jobs.filter(j => !isExpired(j.deadline)).forEach(j => {
         const reg = normalizeRegion(j.region);
         activeCounts[reg] = (activeCounts[reg] || 0) + 1;
-        if (isCapitalRegion(reg)) {
-          totalCapitalActiveCount++;
-        }
+        if (isCapitalRegion(reg)) totalCapitalActiveCount++;
       });
 
       Object.entries(badgeMapping).forEach(([regName, badgeId]) => {
         const badgeEl = document.getElementById(badgeId);
         if (!badgeEl) return;
-
         const count = activeCounts[regName] || 0;
         if (count > 0) {
           badgeEl.style.display = 'inline';
           const textEl = badgeEl.querySelector('.badge-text');
           if (textEl) textEl.textContent = count > 99 ? '99+' : count;
-        } else {
-          badgeEl.style.display = 'none';
-        }
+        } else { badgeEl.style.display = 'none'; }
       });
-
-      const natCapitalBadge = document.getElementById('badge-nat-수도권');
-      if (natCapitalBadge) {
-        if (totalCapitalActiveCount > 0) {
-          natCapitalBadge.style.display = 'inline';
-          const textEl = natCapitalBadge.querySelector('.badge-text');
-          if (textEl) textEl.textContent = totalCapitalActiveCount > 99 ? '99+' : totalCapitalActiveCount;
-        } else {
-          natCapitalBadge.style.display = 'none';
-        }
-      }
     }
 
     function setArchiveTab(tab) {
       currentArchiveTab = tab;
       const tabActive = document.getElementById('tab-active-only');
       const tabAll = document.getElementById('tab-all-archive');
-
       if (tab === 'active') {
         tabActive.className = "px-3 py-1.5 rounded-md bg-white text-blue-600 shadow-xs transition";
         tabAll.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition";
@@ -1133,15 +1098,12 @@
       const nationalSvg = document.getElementById('svg-national-view');
       const tabCap = document.getElementById('view-tab-capital');
       const tabNat = document.getElementById('view-tab-national');
-
       if (view === 'capital') {
-        capitalSvg.classList.remove('hidden');
-        nationalSvg.classList.add('hidden');
+        capitalSvg.classList.remove('hidden'); nationalSvg.classList.add('hidden');
         tabCap.className = "px-3 py-1.5 rounded-lg bg-white text-blue-600 shadow-xs transition";
         tabNat.className = "px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition";
       } else {
-        capitalSvg.classList.add('hidden');
-        nationalSvg.classList.remove('hidden');
+        capitalSvg.classList.add('hidden'); nationalSvg.classList.remove('hidden');
         tabNat.className = "px-3 py-1.5 rounded-lg bg-white text-blue-600 shadow-xs transition";
         tabCap.className = "px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition";
       }
@@ -1150,15 +1112,10 @@
 
     function filterByRegion(region) {
       const target = normalizeRegion(region);
+      if (!target || selectedRegion === target) selectedRegion = null;
+      else selectedRegion = target;
 
-      if (!target || selectedRegion === target) {
-        selectedRegion = null;
-      } else {
-        selectedRegion = target;
-      }
-
-      selectedCompany = null;
-      activePopupCompany = null;
+      selectedCompany = null; activePopupCompany = null;
       const badge = document.getElementById('current-filter-badge');
       const resetBtn = document.getElementById('reset-filter-btn');
 
@@ -1172,20 +1129,13 @@
         badge.className = "text-xs bg-slate-100 text-slate-700 font-medium px-2.5 py-0.5 rounded-full";
         resetBtn.classList.add('hidden');
       }
-
-      highlightActiveMapRegions();
-      renderRegionChips();
-      renderCompanyPool();
-      renderPostings();
+      highlightActiveMapRegions(); renderRegionChips(); renderCompanyPool(); renderPostings();
     }
 
     function handleCompanyClick(event, comp) {
       event.stopPropagation();
-
       if (selectedCompany === comp) {
-        selectedCompany = null;
-        activePopupCompany = null;
-        filterByRegion(null);
+        selectedCompany = null; activePopupCompany = null; filterByRegion(null);
       } else {
         const matchedJob = jobs.find(j => j.company.trim().toLowerCase() === comp.toLowerCase());
         if (matchedJob && matchedJob.region) {
@@ -1198,22 +1148,17 @@
             badge.innerText = `${compRegion} (${count}건 아카이브)`;
             badge.className = "text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-0.5 rounded-full";
             resetBtn.classList.remove('hidden');
-            highlightActiveMapRegions();
-            renderRegionChips();
+            highlightActiveMapRegions(); renderRegionChips();
           }
         }
-
-        selectedCompany = comp;
-        activePopupCompany = comp;
-        renderCompanyPool();
-        renderPostings();
+        selectedCompany = comp; activePopupCompany = comp;
+        renderCompanyPool(); renderPostings();
       }
     }
 
     function closeCompanyPopupOutside(event) {
       if (activePopupCompany && !event.target.closest('#company-pool-container')) {
-        activePopupCompany = null;
-        renderCompanyPool();
+        activePopupCompany = null; renderCompanyPool();
       }
     }
 
@@ -1221,20 +1166,13 @@
       event.stopPropagation();
       let finalTag = tagType;
       if (companyTags[comp] === tagType || tagType === null) {
-        delete companyTags[comp];
-        finalTag = null;
-      } else {
-        companyTags[comp] = tagType;
-      }
-
-      renderCompanyPool();
-      renderPostings();
-
+        delete companyTags[comp]; finalTag = null;
+      } else { companyTags[comp] = tagType; }
+      renderCompanyPool(); renderPostings();
       if (currentUser) {
         try {
           await fetch('/api/jobs?action=save_tag', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: currentUser.id, company: comp, tag: finalTag })
           });
         } catch (e) {}
@@ -1243,30 +1181,17 @@
 
     async function deleteCompanyFromPool(event, comp) {
       event.stopPropagation();
-      if (!currentUser || currentUser.role !== 'admin') {
-        alert('관리자만 삭제할 수 있습니다.');
-        return;
-      }
+      if (!currentUser || currentUser.role !== 'admin') { alert('관리자만 삭제할 수 있습니다.'); return; }
       const targetJobs = jobs.filter(j => j.company.trim().toLowerCase() === comp.toLowerCase());
-      const msg = `'${comp}' 기업을 삭제하시겠습니까? 관련 공고 ${targetJobs.length}건이 함께 삭제됩니다.`;
-      
-      if (!confirm(msg)) return;
-
+      if (!confirm(`'${comp}' 기업을 삭제하시겠습니까? 관련 공고 ${targetJobs.length}건이 함께 삭제됩니다.`)) return;
       for (const j of targetJobs) {
-        try {
-          await fetch(`/api/jobs?id=${j.id}`, { method: 'DELETE' });
-        } catch(e) {}
+        try { await fetch(`/api/jobs?id=${j.id}`, { method: 'DELETE' }); } catch(e) {}
       }
-
       jobs = jobs.filter(j => j.company.trim().toLowerCase() !== comp.toLowerCase());
       delete companyTags[comp];
       localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
-
-      if (selectedCompany === comp) selectedCompany = null;
-      activePopupCompany = null;
-
-      refreshUI();
-      alert('삭제되었습니다.');
+      selectedCompany = null; activePopupCompany = null;
+      refreshUI(); alert('삭제되었습니다.');
     }
 
     function getTagBadgeHtml(tag) {
@@ -1279,35 +1204,15 @@
     function highlightActiveMapRegions() {
       document.querySelectorAll('.region-group').forEach(el => el.classList.remove('active'));
       if (!selectedRegion) return;
-
       const mapping = {
-        '인천광역시': 'grp-incheon',
-        '서울 강북권': 'grp-seoul-gb',
-        '서울 서남부권': 'grp-seoul-sw1',
-        '서울 남부권': 'grp-seoul-sw2',
-        '서울 강남권': 'grp-seoul-gn',
-        '경기 남부 1구역': 'grp-gyeonggi-s1',
-        '경기 남부 2구역': 'grp-gyeonggi-s2',
-        '경기 남부 3구역': 'grp-gyeonggi-s3',
-        '수원시': 'grp-suwon',
-        '화성시(동탄)': 'grp-dongtan',
-        '수도권 전체': 'grp-nat-수도권',
-        '강원권': 'grp-nat-강원권',
-        '대전/충청권': 'grp-nat-대전충청',
-        '경상권': 'grp-nat-경상권',
-        '전라권': 'grp-nat-전라권'
+        '인천광역시': 'grp-incheon', '서울 강북권': 'grp-seoul-gb', '서울 서남부권': 'grp-seoul-sw1',
+        '서울 남부권': 'grp-seoul-sw2', '서울 강남권': 'grp-seoul-gn', '경기 남부 1구역': 'grp-gyeonggi-s1',
+        '경기 남부 2구역': 'grp-gyeonggi-s2', '경기 남부 3구역': 'grp-gyeonggi-s3', '수원시': 'grp-suwon',
+        '화성시(동탄)': 'grp-dongtan', '강원권': 'grp-nat-강원권', '대전/충청권': 'grp-nat-대전충청',
+        '경상권': 'grp-nat-경상권', '전라권': 'grp-nat-전라권'
       };
-
       const targetId = mapping[selectedRegion];
-      if (targetId) {
-        const el = document.getElementById(targetId);
-        if (el) el.classList.add('active');
-      }
-
-      if (isCapitalRegion(selectedRegion)) {
-        const natCap = document.getElementById('grp-nat-수도권');
-        if (natCap) natCap.classList.add('active');
-      }
+      if (targetId) document.getElementById(targetId)?.classList.add('active');
     }
 
     function renderCompanyPool() {
@@ -1315,28 +1220,19 @@
       const title = document.getElementById('archive-region-title');
       const countBadge = document.getElementById('archive-company-count');
       const poolSearchInput = document.getElementById('companyPoolSearchInput');
-      const poolSearchKeyword = poolSearchInput ? poolSearchInput.value.trim().toLowerCase() : '';
+      const keyword = poolSearchInput ? poolSearchInput.value.trim().toLowerCase() : '';
 
       title.innerText = selectedRegion ? `'${selectedRegion}'` : '전체 구역';
-
-      const targetJobs = selectedRegion 
-        ? jobs.filter(j => matchesRegionFilter(j.region, selectedRegion)) 
-        : jobs;
-
-      const compMap = {};
-      const compRegionMap = {};
+      const targetJobs = selectedRegion ? jobs.filter(j => matchesRegionFilter(j.region, selectedRegion)) : jobs;
+      const compMap = {}, compRegionMap = {};
       targetJobs.forEach(j => {
         const c = j.company.trim();
         compMap[c] = (compMap[c] || 0) + 1;
-        if (!compRegionMap[c]) {
-          compRegionMap[c] = normalizeRegion(j.region);
-        }
+        if (!compRegionMap[c]) compRegionMap[c] = normalizeRegion(j.region);
       });
 
       let companies = Object.keys(compMap);
-      if (poolSearchKeyword) {
-        companies = companies.filter(c => c.toLowerCase().includes(poolSearchKeyword));
-      }
+      if (keyword) companies = companies.filter(c => c.toLowerCase().includes(keyword));
       companies.sort((a, b) => a.localeCompare(b, 'ko', { sensitivity: 'base' }));
       countBadge.innerText = `${companies.length}개사`;
 
@@ -1346,7 +1242,6 @@
       }
 
       const isAdmin = currentUser && currentUser.role === 'admin';
-
       container.innerHTML = companies.map(comp => {
         const isSelected = selectedCompany === comp;
         const count = compMap[comp];
@@ -1356,12 +1251,8 @@
 
         return `
           <div class="relative inline-block">
-            <button onclick="handleCompanyClick(event, '${comp}')" class="px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1.5 transition ${
-              isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-300' : 'bg-indigo-50/60 hover:bg-indigo-100 text-indigo-900 border-indigo-200/80'
-            }">
-              <i class="fa-regular fa-building text-[10px]"></i>
-              <span>${comp}</span>
-              ${getTagBadgeHtml(currentTag)}
+            <button onclick="handleCompanyClick(event, '${comp}')" class="px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1.5 transition ${isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-indigo-50/60 hover:bg-indigo-100 text-indigo-900 border-indigo-200/80'}">
+              <i class="fa-regular fa-building text-[10px]"></i><span>${comp}</span>${getTagBadgeHtml(currentTag)}
               <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-indigo-700 text-indigo-100' : 'bg-white text-indigo-600 border border-indigo-100'}">${count}건</span>
             </button>
 
@@ -1370,23 +1261,15 @@
                 <div class="flex items-center justify-between pb-1.5 border-b border-slate-100">
                   <div class="truncate max-w-[140px]">
                     <span class="font-bold text-slate-800">${comp}</span>
-                    <span class="block text-[10px] text-slate-400 font-normal">${belongRegion}</span>
+                    <span class="block text-[10px] text-slate-400">${belongRegion}</span>
                   </div>
                   <span class="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">내 태그</span>
                 </div>
-
                 <div class="grid grid-cols-3 gap-1.5 pt-0.5">
-                  <button onclick="setCompanyTag(event, '${comp}', 'check')" class="flex flex-col items-center justify-center p-1.5 rounded-lg border transition ${currentTag === 'check' ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-bold' : 'hover:bg-slate-50 border-slate-200 text-slate-600'}">
-                    <span class="text-base text-emerald-600">✔</span><span class="text-[10px]">선호</span>
-                  </button>
-                  <button onclick="setCompanyTag(event, '${comp}', 'cross')" class="flex flex-col items-center justify-center p-1.5 rounded-lg border transition ${currentTag === 'cross' ? 'bg-red-50 border-red-500 text-red-700 font-bold' : 'hover:bg-slate-50 border-slate-200 text-slate-600'}">
-                    <span class="text-base text-red-600">✖</span><span class="text-[10px]">제외</span>
-                  </button>
-                  <button onclick="setCompanyTag(event, '${comp}', 'square')" class="flex flex-col items-center justify-center p-1.5 rounded-lg border transition ${currentTag === 'square' ? 'bg-slate-100 border-slate-800 text-slate-900 font-bold' : 'hover:bg-slate-50 border-slate-200 text-slate-600'}">
-                    <span class="text-base text-slate-900">■</span><span class="text-[10px]">보류</span>
-                  </button>
+                  <button onclick="setCompanyTag(event, '${comp}', 'check')" class="p-1.5 rounded-lg border transition ${currentTag === 'check' ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-bold' : 'border-slate-200 text-slate-600'}">✔ 선호</button>
+                  <button onclick="setCompanyTag(event, '${comp}', 'cross')" class="p-1.5 rounded-lg border transition ${currentTag === 'cross' ? 'bg-red-50 border-red-500 text-red-700 font-bold' : 'border-slate-200 text-slate-600'}">✖ 제외</button>
+                  <button onclick="setCompanyTag(event, '${comp}', 'square')" class="p-1.5 rounded-lg border transition ${currentTag === 'square' ? 'bg-slate-100 border-slate-800 text-slate-900 font-bold' : 'border-slate-200 text-slate-600'}">■ 보류</button>
                 </div>
-
                 <div class="flex items-center justify-between pt-1 border-t border-slate-100">
                   ${currentTag ? `<button onclick="setCompanyTag(event, '${comp}', null)" class="text-[11px] text-slate-500">태그 해제</button>` : `<span></span>`}
                   ${isAdmin ? `<button onclick="deleteCompanyFromPool(event, '${comp}')" class="text-[11px] text-red-600">기업 삭제</button>` : ``}
@@ -1400,52 +1283,13 @@
 
     function renderRegionChips() {
       const container = document.getElementById('quick-region-chips');
-      const targetRegions = [
-        "수도권 전체", "수원시", "화성시(동탄)", "서울 강남권", "경기 남부 3구역", "경기 남부 2구역", 
-        "경기 남부 1구역", "서울 서남부권", "서울 남부권", "서울 강북권", 
-        "인천광역시", "대전/충청권"
-      ];
-
+      const targetRegions = ["수도권 전체", "수원시", "화성시(동탄)", "서울 강남권", "경기 남부 3구역", "경기 남부 2구역", "경기 남부 1구역", "서울 서남부권", "서울 남부권", "서울 강북권", "인천광역시", "대전/충청권"];
       container.innerHTML = targetRegions.map(reg => {
         const count = jobs.filter(j => matchesRegionFilter(j.region, reg)).length;
         const activeCount = jobs.filter(j => matchesRegionFilter(j.region, reg) && !isExpired(j.deadline)).length;
         const isSelected = selectedRegion === reg;
-        return `
-          <button onclick="filterByRegion('${reg}')" class="whitespace-nowrap px-2.5 py-1 rounded-lg border text-xs transition flex items-center space-x-1 ${
-            isSelected ? 'bg-blue-600 text-white border-blue-600 font-bold shadow-xs' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
-          }">
-            <span>${reg}</span>
-            <span class="opacity-75 text-[10px]">(${count})</span>
-            ${activeCount > 0 ? `<span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block ml-0.5"></span>` : ''}
-          </button>
-        `;
+        return `<button onclick="filterByRegion('${reg}')" class="whitespace-nowrap px-2.5 py-1 rounded-lg border text-xs transition ${isSelected ? 'bg-blue-600 text-white font-bold' : 'bg-white text-slate-700 border-slate-200'}"><span>${reg}</span> <span class="opacity-75 text-[10px]">(${count})</span></button>`;
       }).join('');
-    }
-
-    function getDDay(deadlineStr) {
-      if (isAlwaysOpen(deadlineStr)) {
-        return { text: "D-∞", color: "bg-orange-100/80 text-orange-800 font-bold border border-orange-300", diff: -999999, isAlways: true };
-      }
-      const today = new Date(); today.setHours(0,0,0,0);
-      const target = new Date(deadlineStr); target.setHours(0,0,0,0);
-      const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-
-      if (diff < 0) return { text: "마감 아카이브", color: "bg-slate-200 text-slate-800 font-bold border border-slate-300", diff, isExpired: true };
-      if (diff === 0) return { text: "D-Day (오늘)", color: "bg-red-500 text-white font-bold animate-pulse", diff, isUrgent: true };
-      if (diff <= 3) return { text: `D-${diff} 임박`, color: "bg-rose-100 text-rose-800 font-bold border border-rose-300", diff, isUrgent: true };
-      if (diff <= 7) return { text: `D-${diff}`, color: "bg-amber-100 text-amber-800 font-semibold border border-amber-300", diff, isUrgent: true };
-      return { text: `D-${diff}`, color: "bg-blue-50 text-blue-700 font-medium border border-blue-200", diff };
-    }
-
-    function getStatusBadge(status) {
-      switch(status) {
-        case '관심': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">관심 공고</span>';
-        case '서류작성중': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">서류 작성 중</span>';
-        case '지원완료': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">지원 완료</span>';
-        case '1차면접': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">1차 면접 예정</span>';
-        case '최종합격': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-600 text-white">최종 합격</span>';
-        default: return `<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700">${status}</span>`;
-      }
     }
 
     function renderPostings() {
@@ -1465,32 +1309,24 @@
 
       if (currentArchiveTab === 'active') {
         filtered.sort((a, b) => {
-          const ddayA = getDDay(a.deadline);
-          const ddayB = getDDay(b.deadline);
+          const ddayA = getDDay(a.deadline), ddayB = getDDay(b.deadline);
           if (ddayA.isAlways && !ddayB.isAlways) return -1;
           if (!ddayA.isAlways && ddayB.isAlways) return 1;
           return ddayA.diff - ddayB.diff;
         });
       } else {
-        filtered.sort((a, b) => {
-          const compA = (a.company || '').trim();
-          const compB = (b.company || '').trim();
-          return compA.localeCompare(compB, 'ko', { sensitivity: 'base' });
-        });
+        filtered.sort((a, b) => a.company.localeCompare(b.company, 'ko', { sensitivity: 'base' }));
       }
 
       document.getElementById('list-count').innerText = `${filtered.length}건`;
-
       if (filtered.length === 0) {
         listContainer.innerHTML = `<div class="col-span-full py-12 text-center bg-white rounded-2xl border border-dashed border-slate-200"><p class="text-xs text-slate-500">조건에 맞는 공고가 없습니다.</p></div>`;
         return;
       }
 
       const isAdmin = currentUser && currentUser.role === 'admin';
-
       listContainer.innerHTML = filtered.map(job => {
         const dday = getDDay(job.deadline);
-        const hasHistory = job.history && job.history.length > 0;
         const displayRegion = normalizeRegion(job.region);
         const tag = companyTags[job.company.trim()] || null;
         const interestCnt = job.interestCount || 0;
@@ -1516,9 +1352,7 @@
               </div>
 
               <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 mb-3">
-                <div class="flex items-center space-x-1.5">
-                  <span class="flex items-center space-x-1"><i class="fa-solid fa-location-dot text-slate-400"></i> <span>${displayRegion}</span></span>
-                </div>
+                <span class="flex items-center space-x-1"><i class="fa-solid fa-location-dot text-slate-400"></i> <span>${displayRegion}</span></span>
                 <div class="flex items-center space-x-1 text-[11px]">
                   <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-semibold">⭐ 관심 ${interestCnt}</span>
                   <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">📩 지원 ${appliedCnt}</span>
@@ -1526,9 +1360,7 @@
               </div>
 
               <div class="flex items-center justify-between p-2.5 bg-white/80 rounded-lg text-xs mb-3 border border-slate-200/80 shadow-2xs">
-                <div class="flex items-center space-x-2">
-                  <span class="text-slate-500 font-medium">내 상태:</span>${getStatusBadge(job.status)}
-                </div>
+                <div class="flex items-center space-x-2"><span class="text-slate-500 font-medium">내 상태:</span>${getStatusBadge(job.status)}</div>
                 ${job.appliedDate ? `<span class="text-[11px] text-slate-500 font-mono">${job.appliedDate} 접수</span>` : `<button onclick="editJob('${job.id}')" class="text-[11px] text-indigo-600 hover:underline font-medium">내 상태 설정</button>`}
               </div>
 
@@ -1579,7 +1411,6 @@
     function editJob(id) {
       const job = jobs.find(j => j.id === id);
       if (!job) return;
-
       document.getElementById('jobForm').reset();
       document.getElementById('form-edit-id').value = job.id;
       document.getElementById('modal-title').innerText = '공고 정보 수정 & 내 상태 설정';
@@ -1597,32 +1428,20 @@
 
       const alwaysCheckbox = document.getElementById('form-always-open');
       const deadlineInput = document.getElementById('form-deadline');
-
-      if (isAlwaysOpen(job.deadline)) {
-        alwaysCheckbox.checked = true; toggleAlwaysOpen();
-      } else {
-        alwaysCheckbox.checked = false; toggleAlwaysOpen();
-        deadlineInput.value = job.deadline;
-      }
+      if (isAlwaysOpen(job.deadline)) { alwaysCheckbox.checked = true; toggleAlwaysOpen(); }
+      else { alwaysCheckbox.checked = false; toggleAlwaysOpen(); deadlineInput.value = job.deadline; }
       document.getElementById('modal-backdrop').classList.remove('hidden');
     }
 
     async function archiveCurrentJobFromModal() {
       const editId = document.getElementById('form-edit-id').value.trim();
       if (!editId) return;
-      const jobIndex = jobs.findIndex(j => j.id === editId);
-      if (jobIndex === -1) return;
-
-      const job = jobs[jobIndex];
+      const job = jobs.find(j => j.id === editId);
+      if (!job) return;
       const todayStr = new Date().toISOString().slice(0, 10);
       const updatedJob = { ...job, deadline: todayStr, userId: currentUser ? currentUser.id : 'admin-1' };
-
-      try {
-        await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedJob) });
-      } catch (e) {}
-      await loadJobsFromServer();
-      closeModal();
-      alert('마감 처리되었습니다.');
+      try { await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedJob) }); } catch (e) {}
+      await loadJobsFromServer(); closeModal(); alert('마감 처리되었습니다.');
     }
 
     function closeModal() { document.getElementById('modal-backdrop').classList.add('hidden'); }
@@ -1633,7 +1452,6 @@
       const banner = document.getElementById('history-detect-banner');
       const bannerText = document.getElementById('history-detect-text');
       const regionSelect = document.getElementById('form-region');
-
       if (!companyVal) { banner.classList.add('hidden'); return; }
       const match = jobs.find(j => j.company.toLowerCase() === companyVal.toLowerCase());
       if (match) {
@@ -1666,12 +1484,8 @@
         createdBy: currentUser ? currentUser.nickname : '관리자'
       };
 
-      try {
-        await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      } catch (err) {}
-
-      await loadJobsFromServer();
-      closeModal();
+      try { await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); } catch (err) {}
+      await loadJobsFromServer(); closeModal();
     }
 
     async function deleteJob(id) {
@@ -1701,8 +1515,7 @@
             item.userId = currentUser ? currentUser.id : 'admin-1';
             await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
           }
-          await loadJobsFromServer();
-          alert('복원되었습니다.');
+          await loadJobsFromServer(); alert('복원되었습니다.');
         } catch(err) { alert('파일 오류'); }
       };
       reader.readAsText(file);
