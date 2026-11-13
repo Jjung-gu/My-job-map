@@ -191,7 +191,7 @@
       <!-- 지도 캔버스 영역 -->
       <div class="relative w-full h-[460px] sm:h-[540px] bg-gradient-to-b from-slate-50 to-slate-100/70 rounded-xl my-4 overflow-hidden border border-slate-200 flex items-center justify-center">
 
-        <!-- 수도권 모서리 둥근 사각 그리드형 직소 퍼즐 SVG -->
+        <!-- [뷰 1] 수도권 모서리 둥근 사각 그리드형 직소 퍼즐 SVG -->
         <svg id="svg-capital-view" viewBox="-30 -20 1000 620" class="w-full h-full select-none">
           <defs>
             <linearGradient id="hanRiverGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -201,16 +201,14 @@
             </linearGradient>
           </defs>
 
-          <!-- 파란색 한강 물줄기 (강북권과 강남/남부/서남부 사이를 부드럽게 흐르는 S자 곡선) -->
+          <!-- 파란색 한강 물줄기 -->
           <path class="river-flow"
                 d="M 140,175 C 240,142 320,142 440,165 C 560,188 650,175 860,128" 
                 fill="none" stroke-width="18" />
           <path d="M 145,175 C 242,142 320,142 440,165 C 560,188 650,175 855,128" 
                 fill="none" stroke="#bae6fd" stroke-width="3.5" opacity="0.85" />
 
-          <!-- ==================== 10개 라운드 그리드 직소 퍼즐 피스 ==================== -->
-
-          <!-- [1] 서울 강북권 (상단 라운드 사각형 + 하단은 한강 물줄기 곡선에 자연스럽게 밀착) -->
+          <!-- [1] 서울 강북권 -->
           <g class="region-group" id="grp-seoul-gb" onclick="filterByRegion('서울 강북권')">
             <path class="puzzle-piece"
                   d="M 334,25 L 646,25 Q 670,25 670,49 L 670,130 Q 670,152 646,154 C 570,164 510,160 440,147 C 385,137 355,134 334,134 Q 310,134 310,110 L 310,49 Q 310,25 334,25 Z" />
@@ -222,7 +220,7 @@
             </g>
           </g>
 
-          <!-- [2] 인천광역시 (좌측 2단 높이 라운드 사각형 + 우측으로 서남부권/경기1구역과 각각 퍼즐 돌기 결합) -->
+          <!-- [2] 인천광역시 -->
           <g class="region-group" id="grp-incheon" onclick="filterByRegion('인천광역시')">
             <path class="puzzle-piece"
                   d="M 64,195 L 186,195 Q 210,195 210,219 L 210,235 C 210,243 234,235 234,250 C 234,265 210,257 210,265 L 210,365 C 210,373 186,365 186,380 C 186,395 210,387 210,395 L 210,416 Q 210,440 186,440 L 64,440 Q 40,440 40,416 L 40,219 Q 40,195 64,195 Z" />
@@ -233,7 +231,7 @@
             </g>
           </g>
 
-          <!-- [3] 서울 서남부권 (상단은 한강 곡선 밀착 + 좌측 인천/우측 남부권/하단 경기1구역과 3면 퍼즐 결합) -->
+          <!-- [3] 서울 서남부권 -->
           <g class="region-group" id="grp-seoul-sw1" onclick="filterByRegion('서울 서남부권')">
             <path class="puzzle-piece"
                   d="M 210,219 Q 210,182 235,176 C 285,165 340,168 395,178 L 395,225 C 395,233 419,225 419,240 C 419,255 395,247 395,255 L 395,310 L 317,310 C 309,310 317,334 302,334 C 287,334 295,310 287,310 L 210,310 L 210,265 C 210,257 234,265 234,250 C 234,235 210,243 210,235 L 210,219 Z" />
@@ -245,7 +243,7 @@
             </g>
           </g>
 
-          <!-- [4] 서울 남부권 (상단은 한강 곡선 밀착 + 좌측 서남부/우측 강남권/하단 경기2구역과 3면 퍼즐 결합) -->
+          <!-- [4] 서울 남부권 -->
           <g class="region-group" id="grp-seoul-sw2" onclick="filterByRegion('서울 남부권')">
             <path class="puzzle-piece"
                   d="M 395,178 C 455,188 520,198 580,192 L 580,225 C 580,233 604,225 604,240 C 604,255 580,247 580,255 L 580,310 L 502,310 C 494,310 502,286 487,286 C 472,286 480,310 472,310 L 395,310 L 395,255 C 395,247 419,255 419,240 C 419,225 395,233 395,225 L 395,178 Z" />
@@ -257,7 +255,7 @@
             </g>
           </g>
 
-          <!-- [5] 서울 강남권 (상단 한강 곡선 밀착 + 우측과 하단을 경기 남부 3구역이 감싸며 퍼즐 돌기로 결합) -->
+          <!-- [5] 서울 강남권 -->
           <g class="region-group" id="grp-seoul-gn" onclick="filterByRegion('서울 강남권')">
             <path class="puzzle-piece"
                   d="M 580,192 C 640,185 705,172 765,158 L 765,225 C 765,233 789,225 789,240 C 789,255 765,247 765,255 L 765,310 L 687,310 C 679,310 687,334 672,334 C 657,334 665,310 657,310 L 580,310 L 580,255 C 580,247 604,255 604,240 C 604,225 580,233 580,225 L 580,192 Z" />
@@ -269,7 +267,7 @@
             </g>
           </g>
 
-          <!-- [6] 경기 남부 1구역 (좌측 인천/상단 서남부/우측 경기2구역과 퍼즐 결합 + 하단 라운드 코너) -->
+          <!-- [6] 경기 남부 1구역 -->
           <g class="region-group" id="grp-gyeonggi-s1" onclick="filterByRegion('경기 남부 1구역')">
             <path class="puzzle-piece"
                   d="M 210,310 L 287,310 C 295,310 287,334 302,334 C 317,334 309,310 317,310 L 395,310 L 395,360 C 395,368 419,360 419,375 C 419,390 395,382 395,390 L 395,440 L 234,440 Q 210,440 210,416 L 210,395 C 210,387 186,395 186,380 C 186,365 210,373 210,365 L 210,310 Z" />
@@ -281,7 +279,7 @@
             </g>
           </g>
 
-          <!-- [7] 경기 남부 2구역 (중앙 허브: 상단 남부권/좌측 경기1/우측 경기3/하단 수원과 4방향 퍼즐 결합) -->
+          <!-- [7] 경기 남부 2구역 -->
           <g class="region-group" id="grp-gyeonggi-s2" onclick="filterByRegion('경기 남부 2구역')">
             <path class="puzzle-piece"
                   d="M 395,310 L 472,310 C 480,310 472,286 487,286 C 502,286 494,310 502,310 L 580,310 L 580,360 C 580,368 604,360 604,375 C 604,390 580,382 580,390 L 580,440 L 502,440 C 494,440 502,464 487,464 C 472,464 480,440 472,440 L 395,440 L 395,390 C 395,382 419,390 419,375 C 419,360 395,368 395,360 L 395,310 Z" />
@@ -293,7 +291,7 @@
             </g>
           </g>
 
-          <!-- [8] 경기 남부 3구역 (서울 강남권의 하단과 우측을 '┙'자 형태로 감싸는 대형 블록 + 동탄과 결합) -->
+          <!-- [8] 경기 남부 3구역 -->
           <g class="region-group" id="grp-gyeonggi-s3" onclick="filterByRegion('경기 남부 3구역')">
             <path class="puzzle-piece"
                   d="M 580,310 L 657,310 C 665,310 657,334 672,334 C 687,334 679,310 687,310 L 765,310 L 765,255 C 765,247 789,255 789,240 C 789,225 765,233 765,225 L 765,158 C 805,149 840,142 868,138 Q 895,134 895,162 L 895,416 Q 895,440 871,440 L 780,440 C 772,440 780,416 765,416 C 750,416 758,440 750,440 L 580,440 L 580,390 C 580,382 604,390 604,375 C 604,360 580,368 580,360 L 580,310 Z" />
@@ -305,7 +303,7 @@
             </g>
           </g>
 
-          <!-- [9] 수원시 (경기 남부 2구역 하단 & 동탄 좌측과 맞물리는 라운드 사각 퍼즐 블록) -->
+          <!-- [9] 수원시 -->
           <g class="region-group" id="grp-suwon" onclick="filterByRegion('수원시')">
             <path class="puzzle-piece"
                   d="M 395,440 L 472,440 C 480,440 472,464 487,464 C 502,464 494,440 502,440 L 580,440 L 580,490 C 580,498 604,490 604,505 C 604,520 580,512 580,520 L 580,565 L 419,565 Q 395,565 395,541 L 395,440 Z" />
@@ -316,7 +314,7 @@
             </g>
           </g>
 
-          <!-- [10] 화성시(동탄) (경기 남부 3구역 하단 & 수원시 우측과 맞물리는 라운드 사각 퍼즐 블록) -->
+          <!-- [10] 화성시(동탄) -->
           <g class="region-group" id="grp-dongtan" onclick="filterByRegion('화성시(동탄)')">
             <path class="puzzle-piece"
                   d="M 580,440 L 750,440 C 758,440 750,416 765,416 C 780,416 772,440 780,440 L 800,440 L 800,541 Q 800,565 776,565 L 580,565 L 580,520 C 580,512 604,520 604,505 C 604,490 580,498 580,490 L 580,440 Z" />
@@ -336,56 +334,74 @@
           </g>
         </svg>
 
-        <!-- 전국 광역권 뷰 SVG -->
-        <svg id="svg-national-view" viewBox="0 0 960 520" class="w-full h-full select-none hidden">
+        <!-- [뷰 2] 전국 광역권 라운드 사각 그리드 직소 퍼즐 SVG -->
+        <svg id="svg-national-view" viewBox="0 0 960 540" class="w-full h-full select-none hidden">
+          
+          <!-- [1] 수도권 (서울/경기/인천) - 좌측 상단 퍼즐 블록 -->
           <g class="region-group" id="grp-nat-수도권" onclick="filterByRegion('수도권 전체')">
-            <path class="puzzle-piece" fill="#e2e8f0"
-                  d="M 260 70 C 380 50 440 80 430 185 C 390 220 280 230 230 190 C 210 130 230 90 260 70 Z" />
-            <text x="325" y="145" class="map-label-main" style="font-size: 15px;">수도권 (서울/경기/인천)</text>
-            <g class="region-badge" id="badge-nat-수도권" transform="translate(415, 130)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="11" />
+            <path class="puzzle-piece"
+                  d="M 168,35 L 480,35 L 480,95 C 480,104 506,95 506,112 C 506,129 480,120 480,129 L 480,190 L 327,190 C 318,190 327,216 310,216 C 293,216 302,190 293,190 L 140,190 L 140,63 Q 140,35 168,35 Z" />
+            <text x="310" y="105" class="map-label-main" style="font-size: 16px;">수도권</text>
+            <text x="310" y="128" class="map-label-sub" style="font-size: 12px;">(서울/경기/인천)</text>
+            <g class="region-badge" id="badge-nat-수도권" transform="translate(420, 80)" style="display: none;">
+              <circle class="badge-circle" cx="0" cy="0" r="12" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
           </g>
 
+          <!-- [2] 강원권 (원주/춘천) - 우측 상단 퍼즐 블록 -->
           <g class="region-group" id="grp-nat-강원권" onclick="filterByRegion('강원권')">
-            <path class="puzzle-piece" fill="#f1f5f9"
-                  d="M 445 60 C 600 40 660 70 640 180 C 580 200 480 195 440 170 C 425 120 430 80 445 60 Z" />
-            <text x="535" y="125" class="map-label-main">강원권 (원주/춘천)</text>
-            <g class="region-badge" id="badge-nat-강원권" transform="translate(605, 115)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
+            <path class="puzzle-piece"
+                  d="M 480,35 L 792,35 Q 820,35 820,63 L 820,190 L 667,190 C 658,190 667,216 650,216 C 633,216 642,190 633,190 L 480,190 L 480,129 C 480,120 506,129 506,112 C 506,95 480,104 480,95 L 480,35 Z" />
+            <text x="650" y="105" class="map-label-main" style="font-size: 16px;">강원권</text>
+            <text x="650" y="128" class="map-label-sub" style="font-size: 12px;">(원주/춘천)</text>
+            <g class="region-badge" id="badge-nat-강원권" transform="translate(760, 80)" style="display: none;">
+              <circle class="badge-circle" cx="0" cy="0" r="12" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
           </g>
 
+          <!-- [3] 대전·충청 (오송/대덕) - 좌측 중단 퍼즐 블록 -->
           <g class="region-group" id="grp-nat-대전충청" onclick="filterByRegion('대전/충청권')">
-            <path class="puzzle-piece" fill="#e2e8f0"
-                  d="M 255 210 C 420 195 470 220 460 310 C 410 340 310 345 235 315 C 220 260 235 225 255 210 Z" />
-            <text x="345" y="270" class="map-label-main" style="font-size: 15px;">대전·충청 (오송/대덕)</text>
-            <g class="region-badge" id="badge-nat-대전충청" transform="translate(425, 255)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
+            <path class="puzzle-piece"
+                  d="M 140,190 L 293,190 C 302,190 293,216 310,216 C 327,216 318,190 327,190 L 480,190 L 480,250 C 480,259 506,250 506,267 C 506,284 480,275 480,284 L 480,345 L 327,345 C 318,345 327,371 310,371 C 293,371 302,345 293,345 L 140,345 L 140,190 Z" />
+            <text x="310" y="262" class="map-label-main" style="font-size: 16px;">대전·충청</text>
+            <text x="310" y="285" class="map-label-sub" style="font-size: 12px;">(오송/대덕)</text>
+            <g class="region-badge" id="badge-nat-대전충청" transform="translate(420, 240)" style="display: none;">
+              <circle class="badge-circle" cx="0" cy="0" r="12" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
           </g>
 
-          <g class="region-group" id="grp-nat-경상권" onclick="filterByRegion('경상권')">
-            <path class="puzzle-piece" fill="#f1f5f9"
-                  d="M 475 210 C 660 190 730 250 690 440 C 580 480 480 440 450 370 C 445 290 460 240 475 210 Z" />
-            <text x="575" y="325" class="map-label-main">경상권 (대구/부산/포항)</text>
-            <g class="region-badge" id="badge-nat-경상권" transform="translate(650, 310)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
-              <text class="badge-text" x="0" y="0">0</text>
-            </g>
-          </g>
-
+          <!-- [4] 전라권 (광주/전주/나주) - 좌측 하단 퍼즐 블록 -->
           <g class="region-group" id="grp-nat-전라권" onclick="filterByRegion('전라권')">
-            <path class="puzzle-piece" fill="#f1f5f9"
-                  d="M 230 325 C 380 320 430 340 420 460 C 370 495 260 500 200 465 C 195 400 210 350 230 325 Z" />
-            <text x="315" y="410" class="map-label-main">전라권 (광주/전주/나주)</text>
-            <g class="region-badge" id="badge-nat-전라권" transform="translate(390, 395)" style="display: none;">
-              <circle class="badge-circle" cx="0" cy="0" r="10" />
+            <path class="puzzle-piece"
+                  d="M 140,345 L 293,345 C 302,345 293,371 310,371 C 327,371 318,345 327,345 L 480,345 L 480,405 C 480,414 454,405 454,422 C 454,439 480,430 480,439 L 480,500 L 168,500 Q 140,500 140,472 L 140,345 Z" />
+            <text x="310" y="418" class="map-label-main" style="font-size: 16px;">전라권</text>
+            <text x="310" y="441" class="map-label-sub" style="font-size: 12px;">(광주/전주/나주)</text>
+            <g class="region-badge" id="badge-nat-전라권" transform="translate(420, 395)" style="display: none;">
+              <circle class="badge-circle" cx="0" cy="0" r="12" />
               <text class="badge-text" x="0" y="0">0</text>
             </g>
+          </g>
+
+          <!-- [5] 경상권 (대구/부산/포항) - 우측 2단 높이 대형 퍼즐 블록 (강원권/대전충청/전라권과 맞물림) -->
+          <g class="region-group" id="grp-nat-경상권" onclick="filterByRegion('경상권')">
+            <path class="puzzle-piece"
+                  d="M 480,190 L 633,190 C 642,190 633,216 650,216 C 667,216 658,190 667,190 L 820,190 L 820,472 Q 820,500 792,500 L 480,500 L 480,439 C 480,430 454,439 454,422 C 454,405 480,414 480,405 L 480,345 L 480,284 C 480,275 506,284 506,267 C 506,250 480,259 480,250 L 480,190 Z" />
+            <text x="650" y="335" class="map-label-main" style="font-size: 16px;">경상권</text>
+            <text x="650" y="358" class="map-label-sub" style="font-size: 12px;">(대구/부산/포항)</text>
+            <g class="region-badge" id="badge-nat-경상권" transform="translate(760, 315)" style="display: none;">
+              <circle class="badge-circle" cx="0" cy="0" r="12" />
+              <text class="badge-text" x="0" y="0">0</text>
+            </g>
+          </g>
+
+          <!-- 방위 표시 -->
+          <g transform="translate(885, 25)">
+            <circle cx="15" cy="15" r="13" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+            <polygon points="15,5 19,19 15,16 11,19" fill="#0284c7" />
+            <text x="15" y="38" font-size="11" font-weight="900" fill="#0f172a" text-anchor="middle">N</text>
           </g>
         </svg>
 
