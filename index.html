@@ -893,117 +893,103 @@
       } catch (e) {}
     }
 
-    // 일반 멤버의 아이디/닉네임/비밀번호 수정 (관리자는 로그아웃되지 않음)
     async function editMemberAccount(targetUserId, curUser, curNick) {
       const newId = prompt(`'${curNick}' 회원의 새로운 아이디를 입력하세요:`, curUser);
       if (!newId || !newId.trim()) return;
-
       const newNick = prompt(`'${curNick}' 회원의 새로운 닉네임을 입력하세요:`, curNick);
       if (!newNick || !newNick.trim()) return;
-
       const newPw = prompt(`'${curNick}' 회원의 새로운 비밀번호를 입력하세요 (변경 원치 않으시면 취소):`);
 
       try {
         await fetch('/api/jobs?action=manage_user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            adminId: currentUser.id,
-            subAction: 'change_account',
-            targetUserId,
-            newUsername: newId.trim(),
-            newNickname: newNick.trim()
-          })
+          body: JSON.stringify({ adminId: currentUser.id, subAction: 'change_account', targetUserId, newUsername: newId.trim(), newNickname: newNick.trim() })
         });
-
         if (newPw && newPw.trim()) {
           await fetch('/api/jobs?action=manage_user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              adminId: currentUser.id,
-              subAction: 'reset_pw',
-              targetUserId,
-              newPassword: newPw.trim()
-            })
+            body: JSON.stringify({ adminId: currentUser.id, subAction: 'reset_pw', targetUserId, newPassword: newPw.trim() })
           });
         }
-
-        alert(`'${newNick}' 회원의 정보가 성공적으로 수정되었습니다.`);
-        await loadAdminData(); // 관리자 창만 새로고침 (로그아웃 안 됨)
-      } catch (e) {
-        alert('회원 정보 수정 중 오류가 발생했습니다.');
-      }
+        alert(`'${newNick}' 회원의 정보가 수정되었습니다.`);
+        await loadAdminData();
+      } catch (e) { alert('오류 발생'); }
     }
 
-    // 관리자 본인의 계정(아이디/닉네임/비번) 변경 버튼 (모달 상단 우측)
     async function changeMyAdminAccount() {
       const newId = prompt('변경할 새로운 관리자 아이디를 입력하세요:', currentUser.username);
       if (!newId || !newId.trim()) return;
-
       const newNick = prompt('변경할 관리자 닉네임을 입력하세요:', currentUser.nickname);
       if (!newNick || !newNick.trim()) return;
-
       const newPw = prompt('새로운 비밀번호를 입력하세요 (변경 원치 않으시면 취소):');
 
       try {
         await fetch('/api/jobs?action=manage_user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            adminId: currentUser.id,
-            subAction: 'change_account',
-            targetUserId: currentUser.id,
-            newUsername: newId.trim(),
-            newNickname: newNick.trim()
-          })
+          body: JSON.stringify({ adminId: currentUser.id, subAction: 'change_account', targetUserId: currentUser.id, newUsername: newId.trim(), newNickname: newNick.trim() })
         });
-
         if (newPw && newPw.trim()) {
           await fetch('/api/jobs?action=manage_user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              adminId: currentUser.id,
-              subAction: 'reset_pw',
-              targetUserId: currentUser.id,
-              newPassword: newPw.trim()
-            })
+            body: JSON.stringify({ adminId: currentUser.id, subAction: 'reset_pw', targetUserId: currentUser.id, newPassword: newPw.trim() })
           });
         }
-
-        alert('관리자 계정 정보가 변경되었습니다. 새 정보로 다시 로그인해 주세요.');
+        alert('관리자 계정 정보가 변경되었습니다. 다시 로그인해 주세요.');
         logout();
-      } catch (e) {
-        alert('관리자 계정 변경 중 오류가 발생했습니다.');
-      }
+      } catch (e) { alert('오류 발생'); }
     }
 
     async function loadJobsFromServer() {
       fallbackLocal();
       refreshUI();
+
       try {
-        const uidParam = currentUser ? `?userId=${encodeURIComponent(currentUser.id)}` : '';
-        const res = await fetch(`/api/jobs${uidParam}`);
+        const uidParam = currentUser ? `?userId=${encodeURIComponent(currentUser.id)}&withTags=1` : '';
+        const res = await fetch(`/api/jobs${uidParam}`, { cache: 'no-store' });
         if (res.ok) {
           const serverData = await res.json();
+          let list = [];
           if (Array.isArray(serverData)) {
-            if (serverData.length > 0) { jobs = serverData; localStorage.setItem('my_jobs_data', JSON.stringify(jobs)); }
-            updateSyncBadge(true);
+            list = serverData;
           } else if (serverData && Array.isArray(serverData.jobs)) {
-            if (serverData.jobs.length > 0) { jobs = serverData.jobs; localStorage.setItem('my_jobs_data', JSON.stringify(jobs)); }
+            list = serverData.jobs;
             if (serverData.companyTags) companyTags = serverData.companyTags;
-            updateSyncBadge(true);
-          } else { updateSyncBadge(false); }
-        } else { updateSyncBadge(false); }
-      } catch (e) { updateSyncBadge(false); }
+          }
+
+          if (list.length > 0) {
+            jobs = list;
+            localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
+          } else if (jobs.length > 0 && currentUser && currentUser.role === 'admin') {
+            // 서버 DB가 비어있고 로컬에 백업이 남아있을 경우 서버로 자동 복구 업로드
+            for (const item of jobs) {
+              await fetch('/api/jobs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...item, userId: currentUser.id })
+              });
+            }
+          }
+          updateSyncBadge(true);
+        } else {
+          updateSyncBadge(false);
+        }
+      } catch (e) {
+        updateSyncBadge(false);
+      }
       refreshUI();
     }
 
     function fallbackLocal() {
       const stored = localStorage.getItem('my_jobs_data');
       if (stored) {
-        try { const parsed = JSON.parse(stored); if (Array.isArray(parsed) && parsed.length > 0) jobs = parsed; } catch(e) {}
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) jobs = parsed;
+        } catch(e) {}
       }
     }
 
@@ -1038,7 +1024,7 @@
     }
 
     function updateStats() {
-      const uniqueCompanies = new Set(jobs.map(j => j.company.trim().toLowerCase())).size;
+      const uniqueCompanies = new Set(jobs.map(j => (j.company || '').trim().toLowerCase())).size;
       const activeJobs = jobs.filter(j => !isExpired(j.deadline)).length;
       const appliedJobs = jobs.filter(j => j.status === '지원완료' || j.status === '1차면접' || j.status === '최종합격').length;
       const archivedJobs = jobs.filter(j => isExpired(j.deadline)).length;
@@ -1049,6 +1035,7 @@
       document.getElementById('stat-archived').innerText = archivedJobs;
     }
 
+    // 누락되었던 natCapitalBadge 처리까지 완벽 복구된 지도 배지 함수
     function updateMapBadges() {
       const badgeMapping = {
         '인천광역시': 'badge-incheon', '서울 강북권': 'badge-seoul-gb', '서울 서남부권': 'badge-seoul-sw1',
@@ -1060,6 +1047,7 @@
 
       const activeCounts = {};
       let totalCapitalActiveCount = 0;
+
       jobs.filter(j => !isExpired(j.deadline)).forEach(j => {
         const reg = normalizeRegion(j.region);
         activeCounts[reg] = (activeCounts[reg] || 0) + 1;
@@ -1074,8 +1062,21 @@
           badgeEl.style.display = 'inline';
           const textEl = badgeEl.querySelector('.badge-text');
           if (textEl) textEl.textContent = count > 99 ? '99+' : count;
-        } else { badgeEl.style.display = 'none'; }
+        } else {
+          badgeEl.style.display = 'none';
+        }
       });
+
+      const natCapitalBadge = document.getElementById('badge-nat-수도권');
+      if (natCapitalBadge) {
+        if (totalCapitalActiveCount > 0) {
+          natCapitalBadge.style.display = 'inline';
+          const textEl = natCapitalBadge.querySelector('.badge-text');
+          if (textEl) textEl.textContent = totalCapitalActiveCount > 99 ? '99+' : totalCapitalActiveCount;
+        } else {
+          natCapitalBadge.style.display = 'none';
+        }
+      }
     }
 
     function setArchiveTab(tab) {
@@ -1137,7 +1138,7 @@
       if (selectedCompany === comp) {
         selectedCompany = null; activePopupCompany = null; filterByRegion(null);
       } else {
-        const matchedJob = jobs.find(j => j.company.trim().toLowerCase() === comp.toLowerCase());
+        const matchedJob = jobs.find(j => (j.company || '').trim().toLowerCase() === comp.toLowerCase());
         if (matchedJob && matchedJob.region) {
           const compRegion = normalizeRegion(matchedJob.region);
           if (selectedRegion !== compRegion) {
@@ -1182,12 +1183,12 @@
     async function deleteCompanyFromPool(event, comp) {
       event.stopPropagation();
       if (!currentUser || currentUser.role !== 'admin') { alert('관리자만 삭제할 수 있습니다.'); return; }
-      const targetJobs = jobs.filter(j => j.company.trim().toLowerCase() === comp.toLowerCase());
+      const targetJobs = jobs.filter(j => (j.company || '').trim().toLowerCase() === comp.toLowerCase());
       if (!confirm(`'${comp}' 기업을 삭제하시겠습니까? 관련 공고 ${targetJobs.length}건이 함께 삭제됩니다.`)) return;
       for (const j of targetJobs) {
         try { await fetch(`/api/jobs?id=${j.id}`, { method: 'DELETE' }); } catch(e) {}
       }
-      jobs = jobs.filter(j => j.company.trim().toLowerCase() !== comp.toLowerCase());
+      jobs = jobs.filter(j => (j.company || '').trim().toLowerCase() !== comp.toLowerCase());
       delete companyTags[comp];
       localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
       selectedCompany = null; activePopupCompany = null;
@@ -1208,11 +1209,12 @@
         '인천광역시': 'grp-incheon', '서울 강북권': 'grp-seoul-gb', '서울 서남부권': 'grp-seoul-sw1',
         '서울 남부권': 'grp-seoul-sw2', '서울 강남권': 'grp-seoul-gn', '경기 남부 1구역': 'grp-gyeonggi-s1',
         '경기 남부 2구역': 'grp-gyeonggi-s2', '경기 남부 3구역': 'grp-gyeonggi-s3', '수원시': 'grp-suwon',
-        '화성시(동탄)': 'grp-dongtan', '강원권': 'grp-nat-강원권', '대전/충청권': 'grp-nat-대전충청',
-        '경상권': 'grp-nat-경상권', '전라권': 'grp-nat-전라권'
+        '화성시(동탄)': 'grp-dongtan', '수도권 전체': 'grp-nat-수도권', '강원권': 'grp-nat-강원권',
+        '대전/충청권': 'grp-nat-대전충청', '경상권': 'grp-nat-경상권', '전라권': 'grp-nat-전라권'
       };
       const targetId = mapping[selectedRegion];
       if (targetId) document.getElementById(targetId)?.classList.add('active');
+      if (isCapitalRegion(selectedRegion)) document.getElementById('grp-nat-수도권')?.classList.add('active');
     }
 
     function renderCompanyPool() {
@@ -1226,7 +1228,8 @@
       const targetJobs = selectedRegion ? jobs.filter(j => matchesRegionFilter(j.region, selectedRegion)) : jobs;
       const compMap = {}, compRegionMap = {};
       targetJobs.forEach(j => {
-        const c = j.company.trim();
+        const c = (j.company || '').trim();
+        if (!c) return;
         compMap[c] = (compMap[c] || 0) + 1;
         if (!compRegionMap[c]) compRegionMap[c] = normalizeRegion(j.region);
       });
@@ -1288,8 +1291,34 @@
         const count = jobs.filter(j => matchesRegionFilter(j.region, reg)).length;
         const activeCount = jobs.filter(j => matchesRegionFilter(j.region, reg) && !isExpired(j.deadline)).length;
         const isSelected = selectedRegion === reg;
-        return `<button onclick="filterByRegion('${reg}')" class="whitespace-nowrap px-2.5 py-1 rounded-lg border text-xs transition ${isSelected ? 'bg-blue-600 text-white font-bold' : 'bg-white text-slate-700 border-slate-200'}"><span>${reg}</span> <span class="opacity-75 text-[10px]">(${count})</span></button>`;
+        return `<button onclick="filterByRegion('${reg}')" class="whitespace-nowrap px-2.5 py-1 rounded-lg border text-xs transition flex items-center space-x-1 ${isSelected ? 'bg-blue-600 text-white font-bold' : 'bg-white text-slate-700 border-slate-200'}"><span>${reg}</span> <span class="opacity-75 text-[10px]">(${count})</span> ${activeCount > 0 ? '<span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block ml-0.5"></span>' : ''}</button>`;
       }).join('');
+    }
+
+    function getDDay(deadlineStr) {
+      if (isAlwaysOpen(deadlineStr)) {
+        return { text: "D-∞", color: "bg-orange-100/80 text-orange-800 font-bold border border-orange-300", diff: -999999, isAlways: true };
+      }
+      const today = new Date(); today.setHours(0,0,0,0);
+      const target = new Date(deadlineStr); target.setHours(0,0,0,0);
+      const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+
+      if (diff < 0) return { text: "마감 아카이브", color: "bg-slate-200 text-slate-800 font-bold border border-slate-300", diff, isExpired: true };
+      if (diff === 0) return { text: "D-Day (오늘)", color: "bg-red-500 text-white font-bold animate-pulse", diff, isUrgent: true };
+      if (diff <= 3) return { text: `D-${diff} 임박`, color: "bg-rose-100 text-rose-800 font-bold border border-rose-300", diff, isUrgent: true };
+      if (diff <= 7) return { text: `D-${diff}`, color: "bg-amber-100 text-amber-800 font-semibold border border-amber-300", diff, isUrgent: true };
+      return { text: `D-${diff}`, color: "bg-blue-50 text-blue-700 font-medium border border-blue-200", diff };
+    }
+
+    function getStatusBadge(status) {
+      switch(status) {
+        case '관심': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">관심 공고</span>';
+        case '서류작성중': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">서류 작성 중</span>';
+        case '지원완료': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">지원 완료</span>';
+        case '1차면접': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">1차 면접 예정</span>';
+        case '최종합격': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-600 text-white">최종 합격</span>';
+        default: return `<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700">${status}</span>`;
+      }
     }
 
     function renderPostings() {
@@ -1299,8 +1328,8 @@
 
       let filtered = jobs.filter(item => {
         const matchesRegion = matchesRegionFilter(item.region, selectedRegion);
-        const matchesCompany = !selectedCompany || item.company.trim().toLowerCase() === selectedCompany.toLowerCase();
-        const matchesSearch = !search || item.company.toLowerCase().includes(search) || item.title.toLowerCase().includes(search);
+        const matchesCompany = !selectedCompany || (item.company || '').trim().toLowerCase() === selectedCompany.toLowerCase();
+        const matchesSearch = !search || (item.company || '').toLowerCase().includes(search) || (item.title || '').toLowerCase().includes(search);
         const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
         const expired = isExpired(item.deadline);
         const matchesTab = currentArchiveTab === 'all' || !expired;
@@ -1315,7 +1344,7 @@
           return ddayA.diff - ddayB.diff;
         });
       } else {
-        filtered.sort((a, b) => a.company.localeCompare(b.company, 'ko', { sensitivity: 'base' }));
+        filtered.sort((a, b) => (a.company || '').localeCompare(b.company || '', 'ko', { sensitivity: 'base' }));
       }
 
       document.getElementById('list-count').innerText = `${filtered.length}건`;
@@ -1328,7 +1357,7 @@
       listContainer.innerHTML = filtered.map(job => {
         const dday = getDDay(job.deadline);
         const displayRegion = normalizeRegion(job.region);
-        const tag = companyTags[job.company.trim()] || null;
+        const tag = companyTags[(job.company || '').trim()] || null;
         const interestCnt = job.interestCount || 0;
         const appliedCnt = job.appliedCount || 0;
         const creator = job.createdBy || '관리자';
@@ -1453,7 +1482,7 @@
       const bannerText = document.getElementById('history-detect-text');
       const regionSelect = document.getElementById('form-region');
       if (!companyVal) { banner.classList.add('hidden'); return; }
-      const match = jobs.find(j => j.company.toLowerCase() === companyVal.toLowerCase());
+      const match = jobs.find(j => (j.company || '').toLowerCase() === companyVal.toLowerCase());
       if (match) {
         const normRegion = normalizeRegion(match.region);
         regionSelect.value = normRegion;
