@@ -9,7 +9,7 @@
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
     
-    /* 마감 임박 빨간 테두리 (좌측 액센트 바와 충돌하지 않도록 상/우/하단 및 외곽 강조) */
+    /* 마감 임박 빨간 테두리 (상/우/하단 및 외곽 강조) */
     .deadline-imminent {
       border-top: 2px solid #ef4444 !important;
       border-right: 2px solid #ef4444 !important;
@@ -18,23 +18,28 @@
     }
 
     /* 상태별 좌측 컬러 액센트 바 (가독성 핵심) */
-    .status-bar-none { border-left: 5px solid #e2e8f0 !important; }
-    .status-bar-interested { border-left: 5px solid #f59e0b !important; background-color: rgba(254, 252, 232, 0.35); }
-    .status-bar-applied { border-left: 5px solid #3b82f6 !important; background-color: rgba(239, 246, 255, 0.35); }
+    .status-bar-none { border-left: 5px solid #cbd5e1 !important; }
+    .status-bar-interested { border-left: 5px solid #f59e0b !important; background-color: rgba(254, 252, 232, 0.25); }
+    .status-bar-applied { border-left: 5px solid #3b82f6 !important; background-color: rgba(239, 246, 255, 0.25); }
 
-    /* 지도 구역 호버 효과 */
-    .region-node { transition: all 0.2s ease; cursor: pointer; }
-    .region-node:hover { transform: translateY(-2px); }
-    .region-node.active { ring: 2px solid #2563eb; background-color: #eff6ff; }
+    /* 퍼즐 직소맵 노드 스타일 */
+    .puzzle-node {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+    .puzzle-node:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
   </style>
 </head>
 <body class="text-slate-800">
 
   <!-- 상단 네비게이션 헤더 -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+        <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
           M
         </div>
         <div>
@@ -43,83 +48,82 @@
         </div>
       </div>
 
-      <!-- 우측 컨트롤 영역 (공고 등록, 내 정보, 관리자) -->
-      <div class="flex items-center space-x-2 sm:space-x-3">
-        <button onclick="openJobModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg text-sm font-semibold shadow-sm transition flex items-center space-x-1">
+      <!-- 상단 컨트롤 버튼 (공고 등록, 회원 정보수정, 관리자) -->
+      <div class="flex items-center space-x-2">
+        <button onclick="openJobModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold shadow-sm transition flex items-center space-x-1">
           <span>+ 공고 등록</span>
         </button>
-        <button onclick="openProfileModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition">
+        <button onclick="openProfileModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-sm font-medium transition">
           정보수정
         </button>
-        <button onclick="openAdminModal()" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-lg text-sm font-medium transition">
+        <button onclick="openAdminModal()" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2 rounded-xl text-sm font-medium transition">
           관리자
         </button>
       </div>
     </div>
   </header>
 
-  <!-- 메인 컨텐츠 영역 -->
+  <!-- 메인 컨테이너 -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     
-    <!-- 상단 지역 스위치 및 상태 범례 바 -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-      <!-- 지도 뷰 선택 ('수도권 퍼즐뷰' -> '수도권' 으로 개편) -->
+    <!-- 지역 뷰 전환 및 상태 범례 바 -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
       <div class="flex items-center space-x-2">
-        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-1">지역 뷰</span>
-        <button onclick="switchRegionMode('capital')" id="region-btn-capital" class="px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 text-white transition">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-400 mr-1">지역 뷰</span>
+        <button onclick="switchRegionMode('capital')" id="region-btn-capital" class="px-3.5 py-1.5 rounded-xl text-sm font-bold bg-blue-600 text-white transition shadow-xs">
           수도권
         </button>
-        <button onclick="switchRegionMode('national')" id="region-btn-national" class="px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+        <button onclick="switchRegionMode('national')" id="region-btn-national" class="px-3.5 py-1.5 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
           전국
         </button>
         <button onclick="resetRegionFilter()" class="text-xs text-slate-500 hover:text-blue-600 underline ml-2">
-          필터 초기화 (더블클릭 가능)
+          필터 초기화
         </button>
       </div>
 
-      <!-- 가독성 상태 범례 안내 -->
+      <!-- 상태 가독성 범례 -->
       <div class="flex flex-wrap items-center gap-3 text-xs">
         <span class="flex items-center gap-1.5 font-medium text-slate-600">
-          <span class="w-2.5 h-4 bg-slate-300 rounded-sm inline-block"></span> 기본(미지정)
+          <span class="w-2.5 h-4 bg-slate-300 rounded-xs inline-block"></span> 미지정
         </span>
         <span class="flex items-center gap-1.5 font-medium text-amber-700">
-          <span class="w-2.5 h-4 bg-amber-400 rounded-sm inline-block"></span> ⭐ 관심공고
+          <span class="w-2.5 h-4 bg-amber-400 rounded-xs inline-block"></span> ⭐ 관심공고
         </span>
         <span class="flex items-center gap-1.5 font-medium text-blue-700">
-          <span class="w-2.5 h-4 bg-blue-500 rounded-sm inline-block"></span> 📝 지원완료
+          <span class="w-2.5 h-4 bg-blue-500 rounded-xs inline-block"></span> 📝 지원완료
         </span>
         <span class="flex items-center gap-1.5 font-medium text-red-600">
-          <span class="w-3.5 h-3.5 border-2 border-red-500 rounded-sm inline-block"></span> 마감임박 (D-3 이내)
+          <span class="w-3.5 h-3.5 border-2 border-red-500 rounded-xs inline-block"></span> 마감임박
         </span>
       </div>
     </div>
 
-    <!-- 레이아웃 그리드: 좌측 현황 맵 / 우측 공고 탭 및 리스트 -->
+    <!-- 2단 그리드 레이아웃 (좌: 퍼즐 직소맵 / 우: 탭 및 공고 리스트) -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
       
-      <!-- 좌측: 지역별 공고 현황 섹션 ('수도권 거점 퍼즐 직소맵' -> '수도권 공고 현황') -->
-      <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 p-5 shadow-sm h-fit">
+      <!-- 좌측: 수도권 공고 현황 직소맵 섹션 -->
+      <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs h-fit">
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h2 id="map-section-title" class="text-lg font-bold text-slate-900">수도권 공고 현황</h2>
-            <p class="text-xs text-slate-500 mt-0.5">거점 지역을 클릭하면 해당 지역 공고만 필터링됩니다.</p>
+            <h2 id="map-section-title" class="text-base font-bold text-slate-900">수도권 공고 현황</h2>
+            <p class="text-xs text-slate-500 mt-0.5">거점 블록을 클릭하면 해당 지역 공고만 모아봅니다.</p>
           </div>
-          <span id="selected-region-badge" class="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold">
+          <span id="selected-region-badge" class="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold">
             전체 지역
           </span>
         </div>
 
-        <!-- 수도권 공고 현황 그리드 / 맵 영역 -->
-        <div id="map-container" ondblclick="resetRegionFilter()" class="grid grid-cols-3 gap-2.5 select-none">
-          <!-- JS에서 동적 렌더링 -->
+        <!-- 퍼즐 맵 노드 그리드 -->
+        <div id="map-container" class="grid grid-cols-3 gap-2.5 select-none">
+          <!-- JS 렌더링 -->
         </div>
       </div>
 
-      <!-- 우측: 탭 네비게이션 및 공고 리스트 영역 -->
+      <!-- 우측: 탭 네비게이션 및 공고 리스트 -->
       <div class="lg:col-span-7 flex flex-col">
         
-        <!-- 탭 네비게이션 (현재 채용 -> 상시공고 -> 역대채용 아카이브 순) -->
-        <div class="bg-white rounded-t-xl border-t border-x border-slate-200 px-4 pt-3 flex items-center justify-between flex-wrap gap-2">
+        <!-- 탭 바: 현재 채용 -> 상시공고 -> 역대채용 아카이브 순서 -->
+        <div class="bg-white rounded-t-2xl border-t border-x border-slate-200 px-4 pt-3 flex items-center justify-between flex-wrap gap-2">
           <div class="flex space-x-1 overflow-x-auto">
             <button onclick="switchTab('active')" id="tab-active" class="tab-btn px-4 py-2.5 font-bold text-sm border-b-2 border-blue-600 text-blue-600 whitespace-nowrap flex items-center gap-1.5">
               <span>현재 채용</span>
@@ -135,21 +139,21 @@
             </button>
           </div>
 
-          <!-- 상태 필터 셀렉트 -->
+          <!-- 상태별 필터 -->
           <div class="pb-2">
-            <select id="status-filter" onchange="renderAll()" class="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-600 focus:outline-none focus:border-blue-500">
+            <select id="status-filter" onchange="renderAll()" class="text-xs border border-slate-200 rounded-xl px-3 py-1.5 text-slate-600 bg-slate-50 focus:outline-none focus:border-blue-500">
               <option value="all">모든 상태 보기</option>
               <option value="interested">⭐ 관심공고만</option>
               <option value="applied">📝 지원완료만</option>
-              <option value="none">미지정 공고만</option>
+              <option value="none">미지정만</option>
             </select>
           </div>
         </div>
 
-        <!-- 공고 카드 리스트 컨테이너 -->
-        <div class="bg-white rounded-b-xl border border-slate-200 p-4 shadow-sm min-h-[480px]">
+        <!-- 공고 카드 리스트 영역 -->
+        <div class="bg-white rounded-b-2xl border border-slate-200 p-4 shadow-xs min-h-[500px]">
           <div id="job-list-container" class="space-y-3">
-            <!-- JS에서 동적 렌더링 -->
+            <!-- JS 렌더링 -->
           </div>
         </div>
 
@@ -157,28 +161,26 @@
     </div>
   </main>
 
-  <!-- ==========================================
-       모달 1: 공고 등록 / 수정 모달 (기본값: 아무것도 선택 안 됨)
-       ========================================== -->
-  <div id="job-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+  <!-- ================= 모달 1: 공고 등록 (기본값: 선택 안 함) ================= -->
+  <div id="job-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4 backdrop-blur-xs">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-bold text-slate-900">새 채용 공고 등록</h3>
-        <button onclick="closeJobModal()" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+        <h3 class="text-base font-bold text-slate-900">새 채용 공고 등록</h3>
+        <button onclick="closeJobModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
       </div>
       <form id="job-form" onsubmit="handleJobSubmit(event)" class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">기업명 *</label>
-          <input type="text" id="job-company" required placeholder="예: 미토퀘스트, 삼성바이오로직스" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+          <label class="block text-xs font-bold text-slate-600 mb-1">기업명 *</label>
+          <input type="text" id="job-company" required placeholder="예: 미토퀘스트, 삼성바이오로직스" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">공고명 (직무) *</label>
-          <input type="text" id="job-title" required placeholder="예: 펩타이드 신약 개발 연구원" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+          <label class="block text-xs font-bold text-slate-600 mb-1">공고명 (직무) *</label>
+          <input type="text" id="job-title" required placeholder="예: 펩타이드 신약 개발 연구원" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">거점 지역 *</label>
-            <select id="job-region" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+            <label class="block text-xs font-bold text-slate-600 mb-1">거점 지역 *</label>
+            <select id="job-region" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
               <option value="수원/광교">수원/광교</option>
               <option value="판교/분당">판교/분당</option>
               <option value="서울 강남/서초">서울 강남/서초</option>
@@ -187,97 +189,94 @@
               <option value="인천 송도">인천 송도</option>
               <option value="용인/기흥">용인/기흥</option>
               <option value="화성/동탄">화성/동탄</option>
-              <option value="대전/오송">대전/오송 (전국)</option>
+              <option value="대전/오송">대전/오송</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">채용 형태</label>
-            <div class="flex items-center h-9 mt-1">
+            <label class="block text-xs font-bold text-slate-600 mb-1">채용 유형</label>
+            <div class="flex items-center h-10">
               <label class="inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="job-always-on" onchange="toggleDeadlineInput()" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2">
-                <span class="text-sm text-slate-700 font-medium">상시공고</span>
+                <input type="checkbox" id="job-always-on" onchange="toggleDeadlineInput()" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2 w-4 h-4">
+                <span class="text-sm text-slate-700 font-semibold">상시공고</span>
               </label>
             </div>
           </div>
         </div>
         <div id="deadline-input-wrapper">
-          <label class="block text-xs font-semibold text-slate-600 mb-1">마감 기한</label>
-          <input type="date" id="job-deadline" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+          <label class="block text-xs font-bold text-slate-600 mb-1">마감 기한</label>
+          <input type="date" id="job-deadline" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
         </div>
         
-        <!-- 중요: 기본값은 아무것도 없게('none') 하고 직접 선택할 수 있게 구성 -->
+        <!-- 기본값: 선택 안 함 (none) -->
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1.5">관심 / 지원 상태 선택 (기본: 선택 안 함)</label>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">관심 / 지원 상태 (기본: 선택 안 함)</label>
           <div class="grid grid-cols-3 gap-2">
-            <label class="flex items-center justify-center p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+            <label class="flex items-center justify-center p-2.5 border border-slate-200 bg-slate-50/50 rounded-xl cursor-pointer hover:bg-slate-100">
               <input type="radio" name="jobStatus" value="none" checked class="mr-1.5 text-slate-600">
-              <span class="text-xs font-medium text-slate-700">선택 안 함</span>
+              <span class="text-xs font-bold text-slate-700">선택 안 함</span>
             </label>
-            <label class="flex items-center justify-center p-2 border border-amber-200 bg-amber-50/40 rounded-lg cursor-pointer hover:bg-amber-50">
+            <label class="flex items-center justify-center p-2.5 border border-amber-200 bg-amber-50/40 rounded-xl cursor-pointer hover:bg-amber-50">
               <input type="radio" name="jobStatus" value="interested" class="mr-1.5 text-amber-500">
-              <span class="text-xs font-semibold text-amber-800">⭐ 관심공고</span>
+              <span class="text-xs font-bold text-amber-800">⭐ 관심공고</span>
             </label>
-            <label class="flex items-center justify-center p-2 border border-blue-200 bg-blue-50/40 rounded-lg cursor-pointer hover:bg-blue-50">
+            <label class="flex items-center justify-center p-2.5 border border-blue-200 bg-blue-50/40 rounded-xl cursor-pointer hover:bg-blue-50">
               <input type="radio" name="jobStatus" value="applied" class="mr-1.5 text-blue-600">
-              <span class="text-xs font-semibold text-blue-800">📝 지원완료</span>
+              <span class="text-xs font-bold text-blue-800">📝 지원완료</span>
             </label>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">메모</label>
-          <textarea id="job-memo" rows="2" placeholder="자격요건, 우대사항 등 핵심 메모" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"></textarea>
+          <label class="block text-xs font-bold text-slate-600 mb-1">메모</label>
+          <textarea id="job-memo" rows="2" placeholder="자격요건, 우대사항 등" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"></textarea>
         </div>
 
         <div class="flex justify-end space-x-2 pt-2">
-          <button type="button" onclick="closeJobModal()" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">취소</button>
-          <button type="submit" class="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">등록하기</button>
+          <button type="button" onclick="closeJobModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100">취소</button>
+          <button type="submit" class="px-4 py-2.5 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-sm">등록하기</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ==========================================
-       모달 2: 회원 정보수정 (비밀번호 변경 기능 포함)
-       ========================================== -->
-  <div id="profile-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+  <!-- ================= 모달 2: 정보수정 (비밀번호 변경) ================= -->
+  <div id="profile-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4 backdrop-blur-xs">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="text-lg font-bold text-slate-900">회원 정보 수정</h3>
-        <button onclick="closeProfileModal()" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+        <h3 class="text-base font-bold text-slate-900">회원 정보 수정</h3>
+        <button onclick="closeProfileModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
       </div>
       
       <div class="space-y-4">
-        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-sm">
+        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-sm">
           <div class="flex justify-between py-1">
-            <span class="text-slate-500">아이디</span>
-            <span id="profile-user-id" class="font-semibold text-slate-800">researcher_jg</span>
+            <span class="text-slate-500 font-medium">아이디</span>
+            <span class="font-bold text-slate-800">researcher_jg</span>
           </div>
           <div class="flex justify-between py-1">
-            <span class="text-slate-500">닉네임</span>
-            <span id="profile-user-nickname" class="font-semibold text-slate-800">정연구원</span>
+            <span class="text-slate-500 font-medium">닉네임</span>
+            <span class="font-bold text-slate-800">정구현</span>
           </div>
         </div>
 
-        <!-- 비밀번호 변경 섹션 -->
         <div class="border-t border-slate-200 pt-4">
           <h4 class="text-sm font-bold text-slate-800 mb-3">비밀번호 변경</h4>
           <form onsubmit="handleUserPasswordChange(event)" class="space-y-3">
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">현재 비밀번호</label>
-              <input type="password" id="current-pw" required placeholder="현재 비밀번호 입력" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
+              <label class="block text-xs font-bold text-slate-600 mb-1">현재 비밀번호</label>
+              <input type="password" id="current-pw" required placeholder="현재 비밀번호 입력" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">새 비밀번호</label>
-              <input type="password" id="new-pw" required placeholder="새 비밀번호 입력" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
+              <label class="block text-xs font-bold text-slate-600 mb-1">새 비밀번호</label>
+              <input type="password" id="new-pw" required placeholder="새 비밀번호 입력" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">새 비밀번호 확인</label>
-              <input type="password" id="new-pw-confirm" required placeholder="새 비밀번호 다시 입력" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm">
+              <label class="block text-xs font-bold text-slate-600 mb-1">새 비밀번호 확인</label>
+              <input type="password" id="new-pw-confirm" required placeholder="새 비밀번호 다시 입력" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
             </div>
             <div class="flex justify-end space-x-2 pt-2">
-              <button type="button" onclick="closeProfileModal()" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">닫기</button>
-              <button type="submit" class="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">비밀번호 변경</button>
+              <button type="button" onclick="closeProfileModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100">닫기</button>
+              <button type="submit" class="px-4 py-2.5 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700">변경 완료</button>
             </div>
           </form>
         </div>
@@ -285,66 +284,59 @@
     </div>
   </div>
 
-  <!-- ==========================================
-       모달 3: 관리자 회원 관리 (아이디/닉네임 표시 + 비밀번호 0000 초기화만 가능)
-       ========================================== -->
-  <div id="admin-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl">
-      <div class="flex justify-between items-center mb-2">
-        <h3 class="text-lg font-bold text-slate-900">관리자 - 회원 관리</h3>
-        <button onclick="closeAdminModal()" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+  <!-- ================= 모달 3: 관리자 회원 관리 (0000 초기화 전용) ================= -->
+  <div id="admin-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4 backdrop-blur-xs">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-1">
+        <h3 class="text-base font-bold text-slate-900">관리자 - 회원 관리</h3>
+        <button onclick="closeAdminModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
       </div>
       <p class="text-xs text-slate-500 mb-4">
-        관리자는 회원의 아이디와 닉네임 확인 및 <strong>비밀번호 초기화(0000)</strong>만 가능합니다.
+        회원의 아이디, 닉네임 확인 및 <strong>비밀번호 0000 초기화</strong>만 가능합니다.
       </p>
 
       <div class="border border-slate-200 rounded-xl overflow-hidden">
         <table class="w-full text-left border-collapse text-sm">
           <thead>
             <tr class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase">
-              <th class="py-2.5 px-4">아이디</th>
-              <th class="py-2.5 px-4">닉네임</th>
-              <th class="py-2.5 px-4 text-right">비밀번호 관리</th>
+              <th class="py-3 px-4 font-bold">아이디</th>
+              <th class="py-3 px-4 font-bold">닉네임</th>
+              <th class="py-3 px-4 text-right font-bold">비밀번호 관리</th>
             </tr>
           </thead>
           <tbody id="admin-user-tbody" class="divide-y divide-slate-200">
-            <!-- JS에서 동적 렌더링 -->
+            <!-- JS 렌더링 -->
           </tbody>
         </table>
       </div>
 
       <div class="flex justify-end mt-4">
-        <button onclick="closeAdminModal()" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">닫기</button>
+        <button onclick="closeAdminModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">닫기</button>
       </div>
     </div>
   </div>
 
-  <!-- ==========================================
-       JavaScript 애플리케이션 로직
-       ========================================== -->
+  <!-- ================= 자바스크립트 로직 ================= -->
   <script>
-    // 1. 초기 샘플 데이터 (기존 공고들의 관심 상태가 true로 되어 있던 것들을 마이그레이션 시 일괄 해제)
     const INITIAL_JOBS = [
       {
         id: 1,
         companyName: '삼성바이오에피스',
         title: '배양/정제 공정개발 및 분석 연구원 채용',
         region: '인천 송도',
-        regionGroup: 'capital',
-        deadline: getOffsetDate(2), // D-2 (마감 임박 빨간 테두리 대상)
+        deadline: getOffsetDate(2),
         isAlwaysOn: false,
-        status: 'interested', // 마이그레이션 함수를 통해 'none'으로 자동 초기화됨
+        status: 'none',
         memo: 'HPLC, SPR 분석 경험 우대'
       },
       {
         id: 2,
         companyName: 'SK바이오팜',
-        title: '중추신경계 및 항암 신약 약리효능 평가 연구원',
+        title: '중추신경계 및 항암 신약 약리효능 평가',
         region: '판교/분당',
-        regionGroup: 'capital',
         deadline: getOffsetDate(10),
         isAlwaysOn: false,
-        status: 'interested', // 마이그레이션 함수를 통해 'none'으로 자동 초기화됨
+        status: 'none',
         memo: 'In vivo 동물모델 실험 설계 유경험자'
       },
       {
@@ -352,32 +344,19 @@
         companyName: '한미약품 연구센터',
         title: '펩타이드/바이오신약 제형 연구 상시 채용',
         region: '화성/동탄',
-        regionGroup: 'capital',
         deadline: '',
-        isAlwaysOn: true, // 상시공고 탭 노출 대상
-        status: 'interested',
-        memo: '가용화 제형 및 약물전달시스템(DDS) 연구'
+        isAlwaysOn: true,
+        status: 'none',
+        memo: '가용화 제형 및 약물전달시스템(DDS)'
       },
       {
         id: 4,
-        companyName: '종근당 효종연구소',
-        title: '합성 및 바이오 신약 탐색 연구원 (상시)',
-        region: '용인/기흥',
-        regionGroup: 'capital',
-        deadline: '',
-        isAlwaysOn: true, // 상시공고 탭 노출 대상
-        status: 'interested',
-        memo: '세포생물학 및 염증 신호전달 기전 연구'
-      },
-      {
-        id: 5,
         companyName: '유한양행 중앙연구소',
-        title: '섬유화 질환 타겟 신약 후보물질 발굴 연구원',
+        title: '섬유화 질환 타겟 신약 후보물질 발굴',
         region: '수원/광교',
-        regionGroup: 'capital',
-        deadline: getOffsetDate(-5), // 마감 지남 -> 역대채용 아카이브 탭 노출
+        deadline: getOffsetDate(-4),
         isAlwaysOn: false,
-        status: 'interested',
+        status: 'none',
         memo: 'IPF 모델 및 TGF-b 신호전달 연구'
       }
     ];
@@ -393,27 +372,22 @@
       '대구/경북', '부산/경남', '광주/전남'
     ];
 
-    // 상태 변수
     let allJobs = [];
-    let currentTab = 'active';       // 'active' | 'alwaysOn' | 'archive'
+    let currentTab = 'active'; // 'active' | 'alwaysOn' | 'archive'
     let currentRegionMode = 'capital'; // 'capital' | 'national'
-    let selectedRegion = null;       // 특정 거점 클릭 시 필터
+    let selectedRegion = null;
 
-    // 회원 샘플 데이터
     let users = [
-      { id: 'researcher_jg', nickname: '정연구원', password: 'password123' },
-      { id: 'bio_kim', nickname: '김바이오', password: 'userpass99' },
-      { id: 'mito_lee', nickname: '이책임', password: 'secret77' }
+      { id: 'researcher_jg', nickname: '정구현', password: 'password123' },
+      { id: 'bio_kim', nickname: '김바이오', password: 'userpass99' }
     ];
 
-    // 날짜 계산 헬퍼 함수
     function getOffsetDate(days) {
       const d = new Date();
       d.setDate(d.getDate() + days);
       return d.toISOString().split('T')[0];
     }
 
-    // D-Day 계산 및 마감 여부 판별 함수
     function getDeadlineInfo(deadlineStr, isAlwaysOn) {
       if (isAlwaysOn) return { isExpired: false, isImminent: false, label: '상시채용' };
       if (!deadlineStr) return { isExpired: false, isImminent: false, label: '기한미정' };
@@ -423,24 +397,18 @@
       const target = new Date(deadlineStr);
       target.setHours(0, 0, 0, 0);
 
-      const diffTime = target - today;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
 
-      if (diffDays < 0) {
-        return { isExpired: true, isImminent: false, label: `마감 (${deadlineStr})` };
-      } else if (diffDays === 0) {
-        return { isExpired: false, isImminent: true, label: 'D-Day (오늘 마감)' };
-      } else if (diffDays <= 3) {
-        return { isExpired: false, isImminent: true, label: `D-${diffDays} (${deadlineStr})` };
-      } else {
-        return { isExpired: false, isImminent: false, label: `D-${diffDays} (${deadlineStr})` };
-      }
+      if (diffDays < 0) return { isExpired: true, isImminent: false, label: `마감 (${deadlineStr})` };
+      if (diffDays === 0) return { isExpired: false, isImminent: true, label: '오늘 마감' };
+      if (diffDays <= 3) return { isExpired: false, isImminent: true, label: `D-${diffDays} (${deadlineStr})` };
+      return { isExpired: false, isImminent: false, label: `D-${diffDays} (${deadlineStr})` };
     }
 
-    // 초기화 및 기존 공고 관심 표시 일괄 해제 마이그레이션
+    // 앱 초기화 및 기존 데이터 마이그레이션 (관심 표시 일괄 해제)
     function initApp() {
       const savedJobs = localStorage.getItem('my_job_map_data');
-      const isMigrated = localStorage.getItem('my_job_map_interest_cleared_v1');
+      const isMigrated = localStorage.getItem('my_job_map_interest_cleared_v2');
 
       if (savedJobs) {
         allJobs = JSON.parse(savedJobs);
@@ -448,14 +416,14 @@
         allJobs = INITIAL_JOBS;
       }
 
-      // 요청사항 반영: 기존 올라와 있는 공고들의 '관심(interested)' 표시 일괄 해제
+      // 기존 공고들의 관심(interested) 표시 일괄 해제 마이그레이션
       if (!isMigrated) {
         allJobs = allJobs.map(job => ({
           ...job,
           status: job.status === 'interested' ? 'none' : (job.status || 'none')
         }));
-        localStorage.setItem('my_job_map_data', JSON.stringify(allJobs));
-        localStorage.setItem('my_job_map_interest_cleared_v1', 'true');
+        saveJobsToStorage();
+        localStorage.setItem('my_job_map_interest_cleared_v2', 'true');
       }
 
       renderAll();
@@ -465,20 +433,18 @@
       localStorage.setItem('my_job_map_data', JSON.stringify(allJobs));
     }
 
-    // 전체 화면 렌더링
     function renderAll() {
       renderMapSection();
       renderJobList();
       updateTabCounts();
     }
 
-    // 1. 좌측 수도권/전국 공고 현황 렌더링
+    // 좌측 퍼즐 직소맵 렌더링
     function renderMapSection() {
       const titleEl = document.getElementById('map-section-title');
       const container = document.getElementById('map-container');
       const badgeEl = document.getElementById('selected-region-badge');
 
-      // 명칭 개편: '수도권 거점 퍼즐 직소맵' -> '수도권 공고 현황'
       titleEl.textContent = currentRegionMode === 'capital' ? '수도권 공고 현황' : '전국 공고 현황';
       badgeEl.textContent = selectedRegion ? `${selectedRegion} 선택됨` : '전체 지역';
 
@@ -492,22 +458,22 @@
 
         const isSelected = selectedRegion === region;
         const activeClass = isSelected
-          ? 'border-blue-600 bg-blue-50/80 ring-2 ring-blue-500/30'
-          : 'border-slate-200 bg-slate-50/60 hover:bg-slate-100';
+          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500/30'
+          : 'border-slate-200 bg-slate-50/70 hover:bg-slate-100';
 
         return `
-          <div onclick="selectRegion('${region}')" class="region-node border rounded-xl p-3.5 flex flex-col justify-between h-24 ${activeClass}">
-            <span class="text-xs font-bold text-slate-700 break-keep">${region}</span>
+          <div onclick="selectRegion('${region}')" class="puzzle-node border rounded-2xl p-3.5 flex flex-col justify-between h-24 ${activeClass}">
+            <span class="text-xs font-bold text-slate-700">${region}</span>
             <div class="flex items-end justify-between mt-2">
-              <span class="text-[11px] text-slate-400">진행 공고</span>
-              <span class="text-lg font-extrabold ${count > 0 ? 'text-blue-600' : 'text-slate-400'}">${count}</span>
+              <span class="text-[11px] text-slate-400 font-medium">진행 공고</span>
+              <span class="text-base font-extrabold ${count > 0 ? 'text-blue-600' : 'text-slate-400'}">${count}</span>
             </div>
           </div>
         `;
       }).join('');
     }
 
-    // 2. 탭 카운트 업데이트
+    // 탭 카운트 갱신
     function updateTabCounts() {
       let activeCount = 0;
       let alwaysOnCount = 0;
@@ -530,19 +496,15 @@
       document.getElementById('count-archive').textContent = archiveCount;
     }
 
-    // 3. 공고 리스트 및 상태 가독성 렌더링
+    // 공고 리스트 렌더링 (가독성 높은 좌측 컬러바 및 뱃지 적용)
     function renderJobList() {
       const container = document.getElementById('job-list-container');
       const statusFilter = document.getElementById('status-filter').value;
 
       const filtered = allJobs.filter(job => {
-        // 지역 필터
         if (selectedRegion && job.region !== selectedRegion) return false;
-        
-        // 상태 필터
-        if (statusFilter !== 'all' && job.status !== statusFilter) return false;
+        if (statusFilter !== 'all' && (job.status || 'none') !== statusFilter) return false;
 
-        // 탭 분리 필터 (현재 채용 -> 상시공고 -> 역대채용 아카이브)
         const info = getDeadlineInfo(job.deadline, job.isAlwaysOn);
         if (currentTab === 'active') {
           return !job.isAlwaysOn && !info.isExpired;
@@ -556,8 +518,8 @@
 
       if (filtered.length === 0) {
         container.innerHTML = `
-          <div class="py-16 text-center text-slate-400 text-sm">
-            해당 조건에 맞는 채용 공고가 없습니다.
+          <div class="py-20 text-center text-slate-400 text-sm font-medium">
+            조건에 일치하는 채용 공고가 없습니다.
           </div>
         `;
         return;
@@ -566,65 +528,58 @@
       container.innerHTML = filtered.map(job => {
         const info = getDeadlineInfo(job.deadline, job.isAlwaysOn);
 
-        // [가독성 포인트 1] 좌측 액센트 바 클래스 (관심: 골드, 지원: 블루, 기본: 슬레이트)
+        // 상태별 좌측 액센트 바 및 우측 필 뱃지
         let statusBarClass = 'status-bar-none';
         let statusBadgeHtml = '';
 
         if (job.status === 'interested') {
           statusBarClass = 'status-bar-interested';
-          statusBadgeHtml = `<span class="px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 rounded-full">⭐ 관심공고</span>`;
+          statusBadgeHtml = `<span class="px-2.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 rounded-full">⭐ 관심공고</span>`;
         } else if (job.status === 'applied') {
           statusBarClass = 'status-bar-applied';
-          statusBadgeHtml = `<span class="px-2 py-0.5 text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300 rounded-full">📝 지원완료</span>`;
+          statusBadgeHtml = `<span class="px-2.5 py-0.5 text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300 rounded-full">📝 지원완료</span>`;
         }
 
-        // [가독성 포인트 2] 마감 임박 빨간 테두리 (상시공고가 아니고 D-3 이내일 때)
         const imminentClass = (!job.isAlwaysOn && info.isImminent) ? 'deadline-imminent' : 'border border-slate-200';
-
-        // [가독성 포인트 3] 상시공고 전용 뱃지 vs D-Day 뱃지
         const deadlineBadgeHtml = job.isAlwaysOn
-          ? `<span class="px-2.5 py-0.5 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md">상시채용</span>`
-          : `<span class="px-2.5 py-0.5 text-xs font-semibold ${info.isImminent ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-slate-100 text-slate-600'} rounded-md">${info.label}</span>`;
+          ? `<span class="px-2.5 py-1 text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg">상시채용</span>`
+          : `<span class="px-2.5 py-1 text-xs font-bold ${info.isImminent ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-slate-100 text-slate-600'} rounded-lg">${info.label}</span>`;
 
         return `
-          <div class="rounded-xl p-4 transition hover:shadow-md bg-white ${imminentClass} ${statusBarClass}">
+          <div class="rounded-2xl p-4 transition hover:shadow-md bg-white ${imminentClass} ${statusBarClass}">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
               <div class="flex items-center flex-wrap gap-2">
-                <span class="text-xs font-bold px-2 py-0.5 bg-slate-100 text-slate-700 rounded">${job.region}</span>
+                <span class="text-xs font-bold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg">${job.region}</span>
                 <span class="text-sm font-extrabold text-slate-900">${job.companyName}</span>
                 ${statusBadgeHtml}
               </div>
-              <div class="flex items-center space-x-1.5">
-                ${deadlineBadgeHtml}
-              </div>
+              <div>${deadlineBadgeHtml}</div>
             </div>
 
             <h3 class="text-base font-bold text-slate-800 mb-1.5">${job.title}</h3>
-            ${job.memo ? `<p class="text-xs text-slate-500 mb-3 bg-slate-50 p-2 rounded border border-slate-100">${job.memo}</p>` : ''}
+            ${job.memo ? `<p class="text-xs text-slate-500 mb-3 bg-slate-50 p-2.5 rounded-xl border border-slate-100">${job.memo}</p>` : ''}
 
-            <!-- 카드 하단 즉시 상태 전환 버튼 그룹 -->
-            <div class="flex items-center justify-between pt-2 border-t border-slate-100 mt-2">
-              <div class="flex items-center space-x-1">
-                <span class="text-[11px] text-slate-400 mr-1">상태 변경:</span>
-                <button onclick="changeJobStatus(${job.id}, 'none')" class="px-2 py-1 rounded text-xs font-medium ${job.status === 'none' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+            <div class="flex items-center justify-between pt-2.5 border-t border-slate-100 mt-2">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-[11px] font-bold text-slate-400 mr-1">상태:</span>
+                <button onclick="changeJobStatus(${job.id}, 'none')" class="px-2.5 py-1 rounded-lg text-xs font-bold ${(job.status||'none') === 'none' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
                   없음
                 </button>
-                <button onclick="changeJobStatus(${job.id}, 'interested')" class="px-2 py-1 rounded text-xs font-medium ${job.status === 'interested' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}">
+                <button onclick="changeJobStatus(${job.id}, 'interested')" class="px-2.5 py-1 rounded-lg text-xs font-bold ${job.status === 'interested' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}">
                   ⭐ 관심
                 </button>
-                <button onclick="changeJobStatus(${job.id}, 'applied')" class="px-2 py-1 rounded text-xs font-medium ${job.status === 'applied' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}">
+                <button onclick="changeJobStatus(${job.id}, 'applied')" class="px-2.5 py-1 rounded-lg text-xs font-bold ${job.status === 'applied' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}">
                   📝 지원완료
                 </button>
               </div>
-
-              <button onclick="deleteJob(${job.id})" class="text-xs text-slate-400 hover:text-red-500">삭제</button>
+              <button onclick="deleteJob(${job.id})" class="text-xs font-medium text-slate-400 hover:text-red-500">삭제</button>
             </div>
           </div>
         `;
       }).join('');
     }
 
-    // 탭 전환 ('active' | 'alwaysOn' | 'archive')
+    // 탭 및 지역 전환 핸들러
     function switchTab(tabName) {
       currentTab = tabName;
       document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -639,20 +594,18 @@
       renderJobList();
     }
 
-    // 수도권 / 전국 뷰 전환
     function switchRegionMode(mode) {
       currentRegionMode = mode;
       selectedRegion = null;
-
       const capBtn = document.getElementById('region-btn-capital');
       const natBtn = document.getElementById('region-btn-national');
 
       if (mode === 'capital') {
-        capBtn.className = 'px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 text-white transition';
-        natBtn.className = 'px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition';
+        capBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold bg-blue-600 text-white transition shadow-xs';
+        natBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition';
       } else {
-        natBtn.className = 'px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-blue-600 text-white transition';
-        capBtn.className = 'px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition';
+        natBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold bg-blue-600 text-white transition';
+        capBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition';
       }
       renderAll();
     }
@@ -667,7 +620,6 @@
       renderAll();
     }
 
-    // 공고 상태 즉시 변경
     function changeJobStatus(jobId, newStatus) {
       allJobs = allJobs.map(job => job.id === jobId ? { ...job, status: newStatus } : job);
       saveJobsToStorage();
@@ -681,7 +633,7 @@
       renderAll();
     }
 
-    // 공고 등록 모달 제어 (열 때마다 기본 상태는 'none'으로 초기화)
+    // 공고 등록 모달
     function openJobModal() {
       document.getElementById('job-form').reset();
       document.querySelector('input[name="jobStatus"][value="none"]').checked = true;
@@ -697,8 +649,7 @@
 
     function toggleDeadlineInput() {
       const isAlwaysOn = document.getElementById('job-always-on').checked;
-      const wrapper = document.getElementById('deadline-input-wrapper');
-      wrapper.style.display = isAlwaysOn ? 'none' : 'block';
+      document.getElementById('deadline-input-wrapper').style.display = isAlwaysOn ? 'none' : 'block';
     }
 
     function handleJobSubmit(e) {
@@ -708,7 +659,7 @@
       const region = document.getElementById('job-region').value;
       const isAlwaysOn = document.getElementById('job-always-on').checked;
       const deadline = isAlwaysOn ? '' : document.getElementById('job-deadline').value;
-      const status = document.querySelector('input[name="jobStatus"]:checked').value; // 기본값 'none'
+      const status = document.querySelector('input[name="jobStatus"]:checked').value;
       const memo = document.getElementById('job-memo').value.trim();
 
       const newJob = {
@@ -716,7 +667,6 @@
         companyName,
         title,
         region,
-        regionGroup: CAPITAL_REGIONS.includes(region) ? 'capital' : 'national',
         deadline,
         isAlwaysOn,
         status,
@@ -727,14 +677,12 @@
       saveJobsToStorage();
       closeJobModal();
 
-      // 상시공고로 등록했으면 상시공고 탭으로 자동 이동
       if (isAlwaysOn) switchTab('alwaysOn');
       else switchTab('active');
-
       renderAll();
     }
 
-    // 회원 정보수정 (비밀번호 변경) 모달 제어
+    // 회원 정보수정 및 비밀번호 변경
     function openProfileModal() {
       document.getElementById('current-pw').value = '';
       document.getElementById('new-pw').value = '';
@@ -748,30 +696,29 @@
       document.getElementById('profile-modal').classList.remove('flex');
     }
 
-    async function handleUserPasswordChange(e) {
+    function handleUserPasswordChange(e) {
       e.preventDefault();
-      const currentPassword = document.getElementById('current-pw').value;
-      const newPassword = document.getElementById('new-pw').value;
-      const confirmPassword = document.getElementById('new-pw-confirm').value;
+      const currentPw = document.getElementById('current-pw').value;
+      const newPw = document.getElementById('new-pw').value;
+      const confirmPw = document.getElementById('new-pw-confirm').value;
 
-      if (newPassword !== confirmPassword) {
-        alert('새 비밀번호와 확인 비밀번호가 일치하지 않습니다.');
+      if (newPw !== confirmPw) {
+        alert('새 비밀번호가 일치하지 않습니다.');
         return;
       }
 
-      // 로컬 시뮬레이션 및 API 호출 구조
-      const targetUser = users[0];
-      if (targetUser.password !== currentPassword) {
-        alert('현재 비밀번호가 일치하지 않습니다. (초기화 시 0000)');
+      const target = users[0];
+      if (target.password !== currentPw) {
+        alert('현재 비밀번호가 일치하지 않습니다. (관리자 초기화 시 "0000")');
         return;
       }
 
-      targetUser.password = newPassword;
+      target.password = newPw;
       alert('비밀번호가 성공적으로 변경되었습니다.');
       closeProfileModal();
     }
 
-    // 관리자 모달 제어 (아이디/닉네임 조회 및 비밀번호 0000 초기화만 제공)
+    // 관리자 모달 (0000 초기화 전용)
     function openAdminModal() {
       renderAdminUserList();
       document.getElementById('admin-modal').classList.remove('hidden');
@@ -787,10 +734,10 @@
       const tbody = document.getElementById('admin-user-tbody');
       tbody.innerHTML = users.map(u => `
         <tr class="hover:bg-slate-50">
-          <td class="py-3 px-4 font-medium text-slate-800">${u.id}</td>
-          <td class="py-3 px-4 text-slate-600">${u.nickname}</td>
+          <td class="py-3 px-4 font-bold text-slate-800">${u.id}</td>
+          <td class="py-3 px-4 text-slate-600 font-medium">${u.nickname}</td>
           <td class="py-3 px-4 text-right">
-            <button onclick="adminResetPassword('${u.id}')" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-xs font-semibold transition">
+            <button onclick="adminResetPassword('${u.id}')" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-bold transition">
               0000 초기화
             </button>
           </td>
@@ -798,15 +745,13 @@
       `).join('');
     }
 
-    async function adminResetPassword(userId) {
+    function adminResetPassword(userId) {
       if (!confirm(`[${userId}] 회원의 비밀번호를 '0000'으로 초기화하시겠습니까?`)) return;
-
       users = users.map(u => u.id === userId ? { ...u, password: '0000' } : u);
-      alert(`[${userId}] 회원의 비밀번호가 '0000'으로 초기화되었습니다.`);
+      alert(`[${userId}] 비밀번호가 '0000'으로 초기화되었습니다.`);
       renderAdminUserList();
     }
 
-    // 앱 시작
     window.addEventListener('DOMContentLoaded', initApp);
   </script>
 </body>
