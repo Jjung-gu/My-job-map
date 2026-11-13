@@ -223,7 +223,7 @@
   </div>
 
   <main id="main-content" class="locked-blur max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-    <!-- 상단 통계 카드 (진행 n / 상시 n 표기 반영) -->
+    <!-- 상단 통계 카드 -->
     <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div onclick="filterByStatCard('all')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:border-blue-400 transition">
         <div>
@@ -286,23 +286,20 @@
         <div class="absolute top-3.5 left-3.5 z-20 pointer-events-none select-none">
           <div class="bg-white/95 backdrop-blur-xs rounded-2xl shadow-md border border-slate-200/90 p-1.5 w-[74px] sm:w-[82px] text-center">
             <div class="bg-white rounded-xl shadow-2xs border border-slate-100 overflow-hidden">
-              <!-- 상단: 빨간 바탕 + 흰색 월(月) 고정 -->
               <div class="bg-[#d9463e] text-white text-[11px] sm:text-xs font-extrabold py-1 tracking-wider">
                 <span id="cal-widget-month">11月</span>
               </div>
-              <!-- 중단: 일자 숫자 (요일별 색상 동적 변경) -->
               <div class="py-1.5 sm:py-2 bg-white">
                 <span id="cal-widget-day" class="text-2xl sm:text-3xl font-black tracking-tight leading-none text-slate-900">14</span>
               </div>
             </div>
-            <!-- 하단: 요일 기준 -->
             <div class="pt-1 pb-0.5 text-[10px] sm:text-[11px] font-bold text-slate-500">
               <span id="cal-widget-dow">토 기준</span>
             </div>
           </div>
         </div>
 
-        <!-- 1. 수도권 지도 SVG (공고 뱃지 최상단 레이어 분리 적용) -->
+        <!-- 1. 수도권 지도 SVG -->
         <svg id="svg-capital-view" viewBox="-30 -20 1000 620" class="w-full h-full select-none">
           <defs>
             <linearGradient id="hanRiverGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -378,7 +375,7 @@
             <text x="15" y="38" font-size="11" font-weight="900" fill="#0f172a" text-anchor="middle">N</text>
           </g>
 
-          <!-- 수도권 공고 숫자 뱃지 최상단 레이어 (항상 맨 위에 표시) -->
+          <!-- 수도권 공고 숫자 뱃지 최상단 레이어 -->
           <g id="capital-badges-top-layer" class="pointer-events-none select-none">
             <g class="region-badge" id="badge-seoul-gb" transform="translate(615, 65)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="11" /><text class="badge-text" x="0" y="0">0</text></g>
             <g class="region-badge" id="badge-incheon" transform="translate(175, 298)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="11" /><text class="badge-text" x="0" y="0">0</text></g>
@@ -393,9 +390,9 @@
           </g>
         </svg>
 
-        <!-- 2. 전국 광역권 지도 SVG (강원-경상 경계 밀착 + 공고 뱃지 최상단 레이어 분리) -->
+        <!-- 2. 전국 광역권 지도 SVG -->
         <svg id="svg-national-view" viewBox="0 0 960 600" class="w-full h-full select-none hidden">
-          <!-- 1. 수도권 (서울/경기/인천 통합 외곽선) -->
+          <!-- 1. 수도권 -->
           <g class="region-group" id="grp-nat-수도권" onclick="filterByRegion('수도권 전체')">
             <path class="puzzle-piece" d="M 385,65 C 365,68 348,82 342,98 C 332,96 318,108 322,122 C 305,124 292,135 294,148 C 282,150 278,164 290,170 C 304,174 316,170 322,182 C 312,190 302,198 308,210 C 316,220 332,216 340,225 C 352,235 372,238 392,232 C 412,226 426,216 442,208 C 452,190 458,172 456,156 C 442,148 430,136 428,120 C 425,102 405,78 385,65 Z" />
             <circle class="puzzle-piece" cx="276" cy="142" r="5" />
@@ -405,28 +402,28 @@
             <text x="382" y="172" class="map-label-sub" style="font-size: 11.5px; fill: #334155;">(서울/경기/인천)</text>
           </g>
 
-          <!-- 2. 강원권 (남단 경계선을 대전충청 및 경상권 북단과 빈틈없이 밀착) -->
+          <!-- 2. 강원권 (경계선 밀착) -->
           <g class="region-group" id="grp-nat-강원권" onclick="filterByRegion('강원권')">
             <path class="puzzle-piece" d="M 385,65 C 418,58 455,62 490,58 C 510,54 522,36 532,28 C 540,24 545,35 552,52 C 578,98 612,148 638,198 C 618,208 598,214 576,208 C 562,205 548,208 535,212 C 505,198 475,186 456,156 C 442,148 430,136 428,120 C 425,102 405,78 385,65 Z" />
             <text x="525" y="132" class="map-label-main" style="font-size: 16px;">강원권</text>
             <text x="525" y="152" class="map-label-sub" style="font-size: 11.5px; fill: #334155;">(원주/춘천)</text>
           </g>
 
-          <!-- 3. 대전·충청권 (동북단 삼합점을 535,212로 일치) -->
+          <!-- 3. 대전·충청권 -->
           <g class="region-group" id="grp-nat-대전충청" onclick="filterByRegion('대전/충청권')">
             <path class="puzzle-piece" d="M 340,225 C 322,222 302,212 286,220 C 272,228 268,246 282,252 C 294,256 298,272 292,288 C 288,302 298,315 314,312 C 320,322 325,332 342,334 C 365,320 388,322 408,332 C 432,336 454,332 472,320 C 478,302 468,285 478,266 C 488,248 512,232 535,212 C 505,198 475,186 456,156 C 458,172 452,190 442,208 C 426,216 412,226 392,232 C 372,238 352,235 340,225 Z" />
             <text x="392" y="275" class="map-label-main" style="font-size: 16px;">대전·충청</text>
             <text x="392" y="295" class="map-label-sub" style="font-size: 11.5px; fill: #334155;">(오송/대덕)</text>
           </g>
 
-          <!-- 4. 경상권 (북단 경계선을 강원권 남단 535,212 -> 576,208 -> 638,198과 완벽히 일치) -->
+          <!-- 4. 경상권 -->
           <g class="region-group" id="grp-nat-경상권" onclick="filterByRegion('경상권')">
             <path class="puzzle-piece" d="M 535,212 C 548,208 562,205 576,208 C 598,214 618,208 638,198 C 652,238 658,288 656,332 C 664,330 670,322 672,332 C 674,352 666,375 658,396 C 648,418 635,436 616,448 C 602,456 592,442 580,446 C 568,450 562,466 548,462 C 538,458 535,444 522,446 C 510,450 502,462 490,454 C 482,446 485,430 472,420 C 460,404 458,382 468,362 C 476,346 476,332 472,320 C 478,302 468,285 478,266 C 488,248 512,232 535,212 Z" />
             <text x="572" y="330" class="map-label-main" style="font-size: 16px;">경상권</text>
             <text x="572" y="350" class="map-label-sub" style="font-size: 11.5px; fill: #334155;">(대구/부산/포항)</text>
           </g>
 
-          <!-- 5. 전라권 (전북/광주/전남 통합 외곽선) -->
+          <!-- 5. 전라권 -->
           <g class="region-group" id="grp-nat-전라권" onclick="filterByRegion('전라권')">
             <path class="puzzle-piece" d="M 342,334 C 365,320 388,322 408,332 C 432,336 454,332 472,320 C 476,332 476,346 468,362 C 458,382 460,404 472,420 C 480,432 478,452 466,462 C 454,470 444,456 435,462 C 426,468 424,486 410,488 C 396,490 392,474 378,478 C 364,482 352,498 334,502 C 318,504 312,490 322,478 C 306,476 292,486 284,474 C 278,462 294,448 286,438 C 276,428 268,416 284,408 C 296,402 302,390 294,380 C 288,370 302,356 318,354 C 330,352 336,342 342,334 Z" />
             <circle class="puzzle-piece" cx="268" cy="445" r="5" />
@@ -437,13 +434,13 @@
             <text x="385" y="432" class="map-label-sub" style="font-size: 11.5px; fill: #334155;">(광주/전주/나주)</text>
           </g>
 
-          <!-- 6. 제주도 (단일 섬 덩어리, 초록색, 클릭 이벤트 없음) -->
+          <!-- 6. 제주도 -->
           <g class="pointer-events-none select-none">
             <path class="island-piece" d="M 295,552 C 312,538 345,536 362,546 C 372,554 366,568 348,574 C 325,580 298,578 288,566 C 284,560 288,556 295,552 Z" />
             <text x="396" y="566" class="map-label-main" style="font-size: 14px; fill: #1e293b;">제주도</text>
           </g>
 
-          <!-- 7. 울릉도 / 독도 (8:2 크기 비율, 초록색, 클릭 이벤트 없음) -->
+          <!-- 7. 울릉도 / 독도 -->
           <g class="pointer-events-none select-none">
             <path class="island-piece" d="M 758,152 C 768,140 788,140 796,150 C 804,160 798,176 784,182 C 768,186 752,178 752,164 C 752,158 754,155 758,152 Z" />
             <text x="776" y="206" class="map-label-main" style="font-size: 15px; fill: #0f172a;">울릉도/독도</text>
@@ -457,7 +454,7 @@
             <text x="15" y="38" font-size="11" font-weight="900" fill="#0f172a" text-anchor="middle">N</text>
           </g>
 
-          <!-- 전국 광역권 공고 숫자 뱃지 최상단 레이어 (항상 맨 위에 표시) -->
+          <!-- 전국 광역권 공고 숫자 뱃지 최상단 레이어 -->
           <g id="national-badges-top-layer" class="pointer-events-none select-none">
             <g class="region-badge" id="badge-nat-수도권" transform="translate(428, 125)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
             <g class="region-badge" id="badge-nat-강원권" transform="translate(575, 105)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
@@ -483,7 +480,7 @@
       <div class="flex items-center space-x-1.5 overflow-x-auto pb-1 mt-3 text-xs scrollbar-none" id="quick-region-chips"></div>
     </section>
 
-    <!-- 기업 풀 섹션 (더보기 확장 기능 탑재) -->
+    <!-- 기업 풀 섹션 -->
     <section class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-3 relative">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-100">
         <div class="flex items-center space-x-2">
@@ -771,7 +768,7 @@
     let currentArchiveTab = 'active'; // 'active' | 'alwaysOn' | 'interest' | 'applied' | 'archived' | 'all'
     let companyTags = {};
     let activePopupCompany = null;
-    let showAllCompanies = false; // 기업 풀 더보기 상태
+    let showAllCompanies = false;
 
     const CAPITAL_DETAILED_REGIONS = [
       '서울 강남권', '서울 서남부권', '서울 남부권', '서울 강북권',
@@ -795,18 +792,17 @@
       return normalizedJob === normalizedTarget;
     }
 
-    // 달력 위젯 및 하단 날짜 동적 렌더링 (평일: 검정, 토: 파랑, 일/공휴일: 빨강)
+    // 달력 위젯 및 하단 날짜 동적 렌더링
     function updateCalendarWidget() {
       const now = new Date();
       const year = now.getFullYear();
       const month = now.getMonth() + 1;
       const date = now.getDate();
-      const day = now.getDay(); // 0: 일, 6: 토
+      const day = now.getDay();
 
       const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
       const dayStr = dayNames[day];
 
-      // 주요 양력 공휴일 체크 (MM-DD)
       const mmdd = `${String(month).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
       const solarHolidays = ['01-01', '03-01', '05-05', '06-06', '08-15', '10-03', '10-09', '12-25'];
       const isHoliday = solarHolidays.includes(mmdd);
@@ -822,11 +818,11 @@
         dayEl.textContent = date;
         dayEl.className = 'text-2xl sm:text-3xl font-black tracking-tight leading-none ';
         if (day === 0 || isHoliday) {
-          dayEl.className += 'text-red-600'; // 일요일 & 공휴일: 빨간 숫자
+          dayEl.className += 'text-red-600';
         } else if (day === 6) {
-          dayEl.className += 'text-blue-600'; // 토요일: 파란 숫자
+          dayEl.className += 'text-blue-600';
         } else {
-          dayEl.className += 'text-slate-900'; // 평일: 검정 숫자
+          dayEl.className += 'text-slate-900';
         }
       }
 
@@ -1230,7 +1226,7 @@
             jobs = list.map(j => ({
               ...j,
               startDate: j.startDate || j.deadline,
-              status: (j.status === '관심' || !j.status) ? '' : j.status
+              status: j.status || '' // '관심' 상태 강제 공란 변환 로직 제거 완료
             }));
             localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
           }
@@ -1253,7 +1249,7 @@
             jobs = parsed.map(j => ({
               ...j,
               startDate: j.startDate || j.deadline,
-              status: (j.status === '관심' || !j.status) ? '' : j.status
+              status: j.status || '' // '관심' 상태 강제 공란 변환 로직 제거 완료
             }));
           }
         } catch(e) {}
@@ -1642,6 +1638,7 @@
     function getStatusBadge(status) {
       if (!status) return '<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-400">선택 안 함</span>';
       switch(status) {
+        case '관심': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">⭐ 관심</span>';
         case '서류작성': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">✍️ 서류작성</span>';
         case '지원완료': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">📩 지원완료</span>';
         case '면접예정': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">💬 면접예정</span>';
@@ -1682,7 +1679,7 @@
         } else if (currentArchiveTab === 'alwaysOn') {
           matchesTab = always;
         } else if (currentArchiveTab === 'interest') {
-          matchesTab = isInterestTabMatch;
+          matchesTab = isInterestTabMatch; // 관심탭 정상 연동
         } else if (currentArchiveTab === 'applied') {
           matchesTab = isAppliedTabMatch;
         } else if (currentArchiveTab === 'archived') {
@@ -1719,8 +1716,9 @@
         const displayRegion = normalizeRegion(job.region);
         const tag = companyTags[(job.company || '').trim()] || null;
         
-        const interestCnt = job.interestCount || 0;
-        const appliedCnt = job.appliedCount || 0;
+        // 관심 카운트 및 지원 카운트 처리
+        const interestCnt = job.interestCount || (job.status === '관심' ? 1 : 0);
+        const appliedCnt = job.appliedCount || ((['지원완료', '면접예정', '최종합격'].includes(job.status)) ? 1 : 0);
         const creator = job.createdBy || '관리자';
 
         let borderClass = "border border-slate-200 bg-white";
