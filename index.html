@@ -164,11 +164,11 @@
 
       <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-3.5">
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">아이디</label>
+          <label class="block text-xs font-bold text-slate-700 mb-1">아이디 (대소문자 무관)</label>
           <input type="text" id="login-username" required placeholder="아이디를 입력하세요" class="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">비밀번호</label>
+          <label class="block text-xs font-bold text-slate-700 mb-1">비밀번호 (대소문자 무관)</label>
           <input type="password" id="login-password" required placeholder="비밀번호를 입력하세요" class="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
         </div>
         <div id="login-error-msg" class="hidden p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-medium"></div>
@@ -669,6 +669,18 @@
       loadJobsFromServer();
     }
 
+    // 탈퇴되었거나 권한이 박탈된 계정 발견 시 즉시 강제 로그아웃 및 캐시 삭제
+    function forceKickOut() {
+      currentUser = null;
+      jobs = [];
+      companyTags = {};
+      localStorage.removeItem('my_job_map_user');
+      localStorage.removeItem('my_jobs_data');
+      applyAuthUI();
+      refreshUI();
+      alert('계정이 탈퇴 처리되었거나 권한이 만료되어 자동 로그아웃되었습니다.');
+    }
+
     function applyAuthUI() {
       const overlay = document.getElementById('auth-overlay');
       const mainContent = document.getElementById('main-content');
@@ -882,7 +894,7 @@
     }
 
     async function manageUserAction(subAction, targetUserId, newUsername = '', newNickname = '', targetCode = '') {
-      if (subAction === 'delete_user' && !confirm('해당 회원을 탈퇴 처리하시겠습니까?')) return;
+      if (subAction === 'delete_user' && !confirm('해당 회원을 탈퇴 처리하시겠습니까? (탈퇴 즉시 해당 회원의 접속이 차단됩니다)')) return;
       try {
         await fetch('/api/jobs?action=manage_user', {
           method: 'POST',
@@ -950,6 +962,13 @@
       try {
         const uidParam = currentUser ? `?userId=${encodeURIComponent(currentUser.id)}&withTags=1` : '';
         const res = await fetch(`/api/jobs${uidParam}`, { cache: 'no-store' });
+
+        // [핵심] 탈퇴되었거나 권한이 없는 계정일 경우(401) 즉시 강제 로그아웃!
+        if (res.status === 401 && currentUser) {
+          forceKickOut();
+          return;
+        }
+
         if (res.ok) {
           const serverData = await res.json();
           let list = [];
@@ -964,7 +983,6 @@
             jobs = list;
             localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
           } else if (jobs.length > 0 && currentUser && currentUser.role === 'admin') {
-            // 서버 DB가 비어있고 로컬에 백업이 남아있을 경우 서버로 자동 복구 업로드
             for (const item of jobs) {
               await fetch('/api/jobs', {
                 method: 'POST',
@@ -1035,7 +1053,6 @@
       document.getElementById('stat-archived').innerText = archivedJobs;
     }
 
-    // 누락되었던 natCapitalBadge 처리까지 완벽 복구된 지도 배지 함수
     function updateMapBadges() {
       const badgeMapping = {
         '인천광역시': 'badge-incheon', '서울 강북권': 'badge-seoul-gb', '서울 서남부권': 'badge-seoul-sw1',
@@ -1172,10 +1189,11 @@
       renderCompanyPool(); renderPostings();
       if (currentUser) {
         try {
-          await fetch('/api/jobs?action=save_tag', {
+          const res = await fetch('/api/jobs?action=save_tag', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: currentUser.id, company: comp, tag: finalTag })
           });
+          if (res.status === 401) forceKickOut();
         } catch (e) {}
       }
     }
@@ -1469,7 +1487,10 @@
       if (!job) return;
       const todayStr = new Date().toISOString().slice(0, 10);
       const updatedJob = { ...job, deadline: todayStr, userId: currentUser ? currentUser.id : 'admin-1' };
-      try { await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedJob) }); } catch (e) {}
+      try {
+        const res = await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedJob) });
+        if (res.status === 401) { forceKickOut(); return; }
+      } catch (e) {}
       await loadJobsFromServer(); closeModal(); alert('마감 처리되었습니다.');
     }
 
@@ -1513,7 +1534,10 @@
         createdBy: currentUser ? currentUser.nickname : '관리자'
       };
 
-      try { await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); } catch (err) {}
+      try {
+        const res = await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (res.status === 401) { closeModal(); forceKickOut(); return; }
+      } catch (err) {}
       await loadJobsFromServer(); closeModal();
     }
 
