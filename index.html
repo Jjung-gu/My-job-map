@@ -88,12 +88,21 @@
       stroke-linejoin: round;
       filter: drop-shadow(0 3px 6px rgba(14, 165, 233, 0.3));
     }
+
+    /* 비로그인 블러 잠금 효과 */
+    .locked-blur {
+      filter: blur(11px);
+      pointer-events: none;
+      user-select: none;
+      opacity: 0.65;
+      transition: all 0.35s ease;
+    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen" onclick="closeCompanyPopupOutside(event)">
 
   <!-- 상단 헤더 -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
@@ -103,33 +112,112 @@
           <div class="flex items-center space-x-2">
             <h1 class="text-lg font-bold text-slate-900 tracking-tight">내일의 지도</h1>
             <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">GH Edition</span>
-            <span id="sync-status-badge" class="text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-medium px-2 py-0.5 rounded-full flex items-center gap-1">
+            <span id="sync-status-badge" class="hidden sm:flex text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-medium px-2 py-0.5 rounded-full items-center gap-1">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> D1 클라우드 동기화
             </span>
           </div>
           <p class="text-xs text-slate-500">수도권 거점별 기업 DB & 역대 채용 아카이브</p>
         </div>
       </div>
-      <div class="flex items-center space-x-2">
-        <button onclick="exportData()" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center space-x-1 transition">
-          <i class="fa-solid fa-download"></i>
-          <span class="hidden sm:inline">백업 저장</span>
+
+      <!-- 우측 컨트롤 & 로그인 프로필 바 -->
+      <div id="header-actions" class="hidden flex items-center space-x-2">
+        <!-- 현재 로그인 유저 배지 -->
+        <div id="user-profile-badge" class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700 border border-slate-200"></div>
+
+        <!-- 관리자 전용 버튼 -->
+        <button id="admin-panel-btn" onclick="openAdminModal()" class="hidden px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center space-x-1 transition shadow-2xs">
+          <i class="fa-solid fa-crown text-amber-600"></i>
+          <span>관리자</span>
+          <span id="pending-user-badge" class="hidden ml-1 px-1.5 py-0.2 bg-red-500 text-white rounded-full text-[10px]">0</span>
         </button>
-        <label class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center space-x-1 cursor-pointer transition">
+
+        <button onclick="exportData()" class="px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center space-x-1 transition" title="JSON 백업 저장">
+          <i class="fa-solid fa-download"></i>
+          <span class="hidden lg:inline">백업</span>
+        </button>
+
+        <label id="import-btn-label" class="hidden px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center space-x-1 cursor-pointer transition" title="JSON 백업 불러오기(관리자 전용)">
           <i class="fa-solid fa-upload"></i>
-          <span class="hidden sm:inline">불러오기</span>
+          <span class="hidden lg:inline">복원</span>
           <input type="file" id="importFileInput" onchange="importData(event)" class="hidden" accept=".json">
         </label>
+
         <button onclick="openModal()" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm flex items-center space-x-1.5 transition">
           <i class="fa-solid fa-plus"></i>
           <span>공고 등록</span>
+        </button>
+
+        <button onclick="logout()" class="px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-red-600 bg-slate-100 hover:bg-red-50 rounded-lg transition" title="로그아웃">
+          <i class="fa-solid fa-right-from-bracket"></i>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- 메인 레이아웃 -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+  <!-- 비로그인 시 정중앙에 뜨는 로그인 / 초대코드 회원가입 오버레이 -->
+  <div id="auth-overlay" class="fixed inset-0 top-16 z-30 flex items-center justify-center p-4 bg-slate-900/25 backdrop-blur-[2px]">
+    <div class="bg-white/95 backdrop-blur-md rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="text-center mb-5">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/25">
+          <i class="fa-solid fa-lock text-xl"></i>
+        </div>
+        <h2 class="text-lg font-extrabold text-slate-900">내일의 지도 멤버십 로그인</h2>
+        <p class="text-xs text-slate-500 mt-1">승인된 멤버만 지도 및 채용 아카이브를 열람할 수 있습니다.<br>공고는 함께 공유하고, 지원 현황과 메모는 개인별로 안전하게 분리됩니다.</p>
+      </div>
+
+      <!-- 로그인 / 회원가입 탭 전환 -->
+      <div class="grid grid-cols-2 bg-slate-100 p-1 rounded-xl text-xs font-bold mb-4">
+        <button id="auth-tab-login" onclick="switchAuthTab('login')" class="py-2 rounded-lg bg-white text-blue-600 shadow-xs transition">로그인</button>
+        <button id="auth-tab-register" onclick="switchAuthTab('register')" class="py-2 rounded-lg text-slate-600 hover:text-slate-900 transition">초대코드로 가입 신청</button>
+      </div>
+
+      <!-- [폼 1] 로그인 -->
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">아이디</label>
+          <input type="text" id="login-username" required placeholder="아이디를 입력하세요" class="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">비밀번호</label>
+          <input type="password" id="login-password" required placeholder="비밀번호를 입력하세요" class="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        <div id="login-error-msg" class="hidden p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-medium"></div>
+        <button type="submit" class="w-full py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-500/20 transition">
+          지도 잠금 해제 및 로그인
+        </button>
+      </form>
+
+      <!-- [폼 2] 초대코드 회원가입 신청 -->
+      <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-3 hidden">
+        <div>
+          <label class="block text-xs font-bold text-indigo-700 mb-1"><i class="fa-solid fa-ticket mr-1"></i>전달받은 초대코드 *</label>
+          <input type="text" id="reg-invite-code" required placeholder="예: GH-7X9K (대소문자 무관)" class="w-full px-3.5 py-2 text-xs font-mono uppercase bg-indigo-50/50 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">사용할 아이디 *</label>
+            <input type="text" id="reg-username" required placeholder="영문/숫자" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">닉네임 (실명/별명) *</label>
+            <input type="text" id="reg-nickname" required placeholder="공고 등록 시 표시됨" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">비밀번호 *</label>
+          <input type="password" id="reg-password" required placeholder="비밀번호 설정" class="w-full px-3.5 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        <div id="reg-status-msg" class="hidden p-2.5 rounded-lg text-xs font-medium"></div>
+        <button type="submit" class="w-full py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-500/20 transition">
+          가입 신청하기 (관리자 승인 후 활성화)
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 메인 레이아웃 (비로그인 시 locked-blur 클래스로 블러 처리됨) -->
+  <main id="main-content" class="locked-blur max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
     <!-- 현황 통계 -->
     <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -153,7 +241,7 @@
       </div>
       <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
         <div>
-          <p class="text-xs text-slate-500 font-medium">지원 완료 / 전형 중</p>
+          <p class="text-xs text-slate-500 font-medium">내 지원 완료 / 전형 중</p>
           <p id="stat-applied" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
         </div>
         <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -337,7 +425,7 @@
         <!-- [뷰 2] 전국 광역권 라운드 사각 그리드 직소 퍼즐 SVG -->
         <svg id="svg-national-view" viewBox="0 0 960 540" class="w-full h-full select-none hidden">
           
-          <!-- [1] 수도권 (서울/경기/인천) - 좌측 상단 퍼즐 블록 -->
+          <!-- [1] 수도권 -->
           <g class="region-group" id="grp-nat-수도권" onclick="filterByRegion('수도권 전체')">
             <path class="puzzle-piece"
                   d="M 168,35 L 480,35 L 480,95 C 480,104 506,95 506,112 C 506,129 480,120 480,129 L 480,190 L 327,190 C 318,190 327,216 310,216 C 293,216 302,190 293,190 L 140,190 L 140,63 Q 140,35 168,35 Z" />
@@ -349,7 +437,7 @@
             </g>
           </g>
 
-          <!-- [2] 강원권 (원주/춘천) - 우측 상단 퍼즐 블록 -->
+          <!-- [2] 강원권 -->
           <g class="region-group" id="grp-nat-강원권" onclick="filterByRegion('강원권')">
             <path class="puzzle-piece"
                   d="M 480,35 L 792,35 Q 820,35 820,63 L 820,190 L 667,190 C 658,190 667,216 650,216 C 633,216 642,190 633,190 L 480,190 L 480,129 C 480,120 506,129 506,112 C 506,95 480,104 480,95 L 480,35 Z" />
@@ -361,7 +449,7 @@
             </g>
           </g>
 
-          <!-- [3] 대전·충청 (오송/대덕) - 좌측 중단 퍼즐 블록 -->
+          <!-- [3] 대전·충청 -->
           <g class="region-group" id="grp-nat-대전충청" onclick="filterByRegion('대전/충청권')">
             <path class="puzzle-piece"
                   d="M 140,190 L 293,190 C 302,190 293,216 310,216 C 327,216 318,190 327,190 L 480,190 L 480,250 C 480,259 506,250 506,267 C 506,284 480,275 480,284 L 480,345 L 327,345 C 318,345 327,371 310,371 C 293,371 302,345 293,345 L 140,345 L 140,190 Z" />
@@ -373,7 +461,7 @@
             </g>
           </g>
 
-          <!-- [4] 전라권 (광주/전주/나주) - 좌측 하단 퍼즐 블록 -->
+          <!-- [4] 전라권 -->
           <g class="region-group" id="grp-nat-전라권" onclick="filterByRegion('전라권')">
             <path class="puzzle-piece"
                   d="M 140,345 L 293,345 C 302,345 293,371 310,371 C 327,371 318,345 327,345 L 480,345 L 480,405 C 480,414 454,405 454,422 C 454,439 480,430 480,439 L 480,500 L 168,500 Q 140,500 140,472 L 140,345 Z" />
@@ -385,7 +473,7 @@
             </g>
           </g>
 
-          <!-- [5] 경상권 (대구/부산/포항) - 우측 2단 높이 대형 퍼즐 블록 (강원권/대전충청/전라권과 맞물림) -->
+          <!-- [5] 경상권 -->
           <g class="region-group" id="grp-nat-경상권" onclick="filterByRegion('경상권')">
             <path class="puzzle-piece"
                   d="M 480,190 L 633,190 C 642,190 633,216 650,216 C 667,216 658,190 667,190 L 820,190 L 820,472 Q 820,500 792,500 L 480,500 L 480,439 C 480,430 454,439 454,422 C 454,405 480,414 480,405 L 480,345 L 480,284 C 480,275 506,284 506,267 C 506,250 480,259 480,250 L 480,190 Z" />
@@ -430,7 +518,7 @@
             <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]"></i>
             <input type="text" id="companyPoolSearchInput" oninput="renderCompanyPool()" placeholder="기업 풀 내 회사 검색..." class="pl-8 pr-3 py-1.5 text-xs bg-slate-50 hover:bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 w-44 sm:w-56 transition placeholder:text-slate-400">
           </div>
-          <span class="hidden md:inline text-[11px] text-slate-400">클릭 시 해당 권역으로 지도 이동</span>
+          <span class="hidden md:inline text-[11px] text-slate-400">상태 태그(✔, ✖, ■)는 내 계정에만 개별 저장됩니다</span>
         </div>
       </div>
 
@@ -455,7 +543,7 @@
         <div class="flex items-center space-x-2">
           <input type="text" id="searchInput" oninput="renderPostings()" placeholder="회사명, 직무 검색..." class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-48">
           <select id="statusFilter" onchange="renderPostings()" class="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none">
-            <option value="ALL">전체 전형 상태</option>
+            <option value="ALL">내 전체 전형 상태</option>
             <option value="관심">관심 공고</option>
             <option value="서류작성중">서류 작성 중</option>
             <option value="지원완료">지원 완료</option>
@@ -473,91 +561,112 @@
   <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-        <h3 id="modal-title" class="text-base font-bold text-slate-900">새 채용 공고 등록</h3>
+        <div>
+          <h3 id="modal-title" class="text-base font-bold text-slate-900">새 채용 공고 등록</h3>
+          <p class="text-[11px] text-slate-400 mt-0.5">공고 기본 정보는 모든 멤버에게 공유되며, 전형 상태와 메모는 내 계정에만 저장됩니다.</p>
+        </div>
         <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
 
       <form id="jobForm" onsubmit="saveJobPosting(event)" class="mt-4 space-y-4">
         <input type="hidden" id="form-edit-id" value="">
 
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">회사명 *</label>
-          <input type="text" id="form-company" required oninput="checkCompanyHistory()" placeholder="예: 한미약품, 유한양행, 에이비엘바이오" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-          <div id="history-detect-banner" class="hidden mt-1.5 p-2.5 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-700 flex items-start space-x-1.5">
-            <i class="fa-solid fa-circle-info mt-0.5 text-indigo-500"></i>
-            <span id="history-detect-text"></span>
+        <!-- 공통 공유 영역 -->
+        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-extrabold text-slate-700 flex items-center gap-1">
+              <i class="fa-solid fa-share-nodes text-blue-600"></i> 공통 공고 정보 (전체 멤버 공유)
+            </span>
           </div>
-        </div>
 
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">채용 포지션 / 공고 제목 *</label>
-          <input type="text" id="form-title" required placeholder="예: In vitro 효능 평가 신약개발 연구원" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">근무 권역 *</label>
-            <select id="form-region" required onchange="handleManualRegionChange()" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
-              <optgroup label="수원 & 경기 남부 권역">
-                <option value="수원시">수원시</option>
-                <option value="화성시(동탄)">화성시(동탄)</option>
-                <option value="경기 남부 3구역">경기 남부 3구역 (성남·용인·하남)</option>
-                <option value="경기 남부 2구역">경기 남부 2구역 (안양·과천·군포·의왕)</option>
-                <option value="경기 남부 1구역">경기 남부 1구역 (부천·시흥·광명)</option>
-                <option value="인천광역시">인천광역시</option>
-              </optgroup>
-              <optgroup label="서울 권역 (4개)">
-                <option value="서울 강남권">서울 강남권 (서초·강남·송파)</option>
-                <option value="서울 서남부권">서울 서남부권 (강서·양천·영등포·동작)</option>
-                <option value="서울 남부권">서울 남부권 (구로·금천·관악)</option>
-                <option value="서울 강북권">서울 강북권 (마포·용산·종로·중구·성동 등)</option>
-              </optgroup>
-              <optgroup label="기타 전국 광역권">
-                <option value="수도권 전체">수도권 기타/전체</option>
-                <option value="대전/충청권">대전/충청권 (오송/대덕)</option>
-                <option value="경상권">경상권 (대구/부산/포항 등)</option>
-                <option value="전라권">전라권</option>
-                <option value="강원권">강원권</option>
-              </optgroup>
-            </select>
-          </div>
-          <div>
-            <div class="flex items-center justify-between mb-1">
-              <label class="text-xs font-semibold text-slate-700">마감일 *</label>
-              <label class="flex items-center space-x-1 cursor-pointer select-none">
-                <input type="checkbox" id="form-always-open" onchange="toggleAlwaysOpen()" class="w-3.5 h-3.5 rounded text-orange-600 focus:ring-orange-500">
-                <span class="text-[11px] font-bold text-orange-600">채용 시 마감 (상시)</span>
-              </label>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">회사명 *</label>
+            <input type="text" id="form-company" required oninput="checkCompanyHistory()" placeholder="예: 한미약품, 유한양행, 에이비엘바이오" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <div id="history-detect-banner" class="hidden mt-1.5 p-2.5 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-700 flex items-start space-x-1.5">
+              <i class="fa-solid fa-circle-info mt-0.5 text-indigo-500"></i>
+              <span id="history-detect-text"></span>
             </div>
-            <input type="date" id="form-deadline" required class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
           </div>
-        </div>
 
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">공고 링크 (URL)</label>
-          <input type="url" id="form-url" placeholder="https://..." class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">현재 상태</label>
-            <select id="form-status" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
-              <option value="관심">관심 공고</option>
-              <option value="서류작성중">서류 작성 중</option>
-              <option value="지원완료">지원 완료</option>
-              <option value="1차면접">1차 면접 예정</option>
-              <option value="최종합격">최종 합격</option>
-            </select>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">채용 포지션 / 공고 제목 *</label>
+            <input type="text" id="form-title" required placeholder="예: In vitro 효능 평가 신약개발 연구원" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
           </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">근무 권역 *</label>
+              <select id="form-region" required onchange="handleManualRegionChange()" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                <optgroup label="수원 & 경기 남부 권역">
+                  <option value="수원시">수원시</option>
+                  <option value="화성시(동탄)">화성시(동탄)</option>
+                  <option value="경기 남부 3구역">경기 남부 3구역 (성남·용인·하남)</option>
+                  <option value="경기 남부 2구역">경기 남부 2구역 (안양·과천·군포·의왕)</option>
+                  <option value="경기 남부 1구역">경기 남부 1구역 (부천·시흥·광명)</option>
+                  <option value="인천광역시">인천광역시</option>
+                </optgroup>
+                <optgroup label="서울 권역 (4개)">
+                  <option value="서울 강남권">서울 강남권 (서초·강남·송파)</option>
+                  <option value="서울 서남부권">서울 서남부권 (강서·양천·영등포·동작)</option>
+                  <option value="서울 남부권">서울 남부권 (구로·금천·관악)</option>
+                  <option value="서울 강북권">서울 강북권 (마포·용산·종로·중구·성동 등)</option>
+                </optgroup>
+                <optgroup label="기타 전국 광역권">
+                  <option value="수도권 전체">수도권 기타/전체</option>
+                  <option value="대전/충청권">대전/충청권 (오송/대덕)</option>
+                  <option value="경상권">경상권 (대구/부산/포항 등)</option>
+                  <option value="전라권">전라권</option>
+                  <option value="강원권">강원권</option>
+                </optgroup>
+              </select>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-xs font-semibold text-slate-700">마감일 *</label>
+                <label class="flex items-center space-x-1 cursor-pointer select-none">
+                  <input type="checkbox" id="form-always-open" onchange="toggleAlwaysOpen()" class="w-3.5 h-3.5 rounded text-orange-600 focus:ring-orange-500">
+                  <span class="text-[11px] font-bold text-orange-600">채용 시 마감 (상시)</span>
+                </label>
+              </div>
+              <input type="date" id="form-deadline" required class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+            </div>
+          </div>
+
           <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">지원 제출일 (로그)</label>
-            <input type="date" id="form-applied-date" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <label class="block text-xs font-semibold text-slate-700 mb-1">공고 링크 (URL)</label>
+            <input type="url" id="form-url" placeholder="https://..." class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
           </div>
         </div>
 
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">메모 (제출 서류 버전, 특이사항, 세부 근무지 주소)</label>
-          <textarea id="form-memo" rows="2" placeholder="예: 판교 바이오센터 연구동, 포트폴리오 ver2.1 첨부" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+        <!-- 개인 전용 프라이빗 영역 -->
+        <div class="p-3.5 bg-indigo-50/50 rounded-xl border border-indigo-100 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-extrabold text-indigo-800 flex items-center gap-1">
+              <i class="fa-solid fa-user-shield text-indigo-600"></i> 내 개인 설정 (나에게만 보임 · 익명 인원수에만 반영)
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">내 전형 상태</label>
+              <select id="form-status" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <option value="관심">⭐ 관심 공고</option>
+                <option value="서류작성중">✍️ 서류 작성 중</option>
+                <option value="지원완료">📩 지원 완료</option>
+                <option value="1차면접">💬 면접 전형</option>
+                <option value="최종합격">🎉 최종 합격</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">내 지원 제출일</label>
+              <input type="date" id="form-applied-date" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">내 비밀 메모 (타인 열람 불가)</label>
+            <textarea id="form-memo" rows="2" placeholder="예: 자소서 v2 제출, 희망연봉, 개인 면접 복기 등 (나에게만 보입니다)" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+          </div>
         </div>
 
         <div class="flex items-center justify-between pt-3 border-t border-slate-100">
@@ -576,19 +685,74 @@
     </div>
   </div>
 
+  <!-- 관리자 전용 모달 (초대코드 발급 & 회원 승인/탈퇴 관리) -->
+  <div id="admin-modal-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto space-y-6">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
+            <i class="fa-solid fa-crown"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900">관리자 멤버십 & 초대코드 관리</h3>
+            <p class="text-[11px] text-slate-500">그룹별 랜덤 초대코드를 생성하고 가입 신청자를 승인하거나 탈퇴 처리합니다.</p>
+          </div>
+        </div>
+        <button onclick="closeAdminModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <!-- 1. 그룹별 초대코드 생성 섹션 -->
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+        <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+          <i class="fa-solid fa-ticket text-indigo-600"></i> 그룹별 초대코드 발급
+        </h4>
+        <form onsubmit="createInviteCode(event)" class="flex flex-col sm:flex-row gap-2">
+          <input type="text" id="admin-group-name" required placeholder="그룹명 입력 (예: 대학원 연구실, 취업스터디 1기, 지인)" class="flex-1 px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <input type="text" id="admin-custom-code" placeholder="지정 코드 (비워두면 랜덤 생성)" class="sm:w-48 px-3 py-2 text-xs font-mono uppercase bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition shrink-0">
+            + 초대코드 생성
+          </button>
+        </form>
+
+        <!-- 발급된 초대코드 리스트 -->
+        <div id="admin-invite-list" class="flex flex-wrap gap-2 pt-1"></div>
+      </div>
+
+      <!-- 2. 가입 회원 명단 (승인 대기 / 활동 중 멤버) -->
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <i class="fa-solid fa-users text-blue-600"></i> 전체 회원 목록 및 승인/탈퇴 관리
+          </h4>
+          <span id="admin-user-count" class="text-xs font-bold text-slate-500">0명</span>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 border-b border-slate-200">
+                <th class="py-2.5 px-3 font-bold">상태</th>
+                <th class="py-2.5 px-3 font-bold">닉네임 (아이디)</th>
+                <th class="py-2.5 px-3 font-bold">가입 그룹 (초대코드)</th>
+                <th class="py-2.5 px-3 font-bold">가입일</th>
+                <th class="py-2.5 px-3 font-bold text-right">관리 액션</th>
+              </tr>
+            </thead>
+            <tbody id="admin-users-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     let jobs = [];
+    let currentUser = null;
     let selectedRegion = null;
     let selectedCompany = null;
     let currentMapView = 'capital';
     let currentArchiveTab = 'active';
-
     let companyTags = {};
-    try {
-      const savedTags = localStorage.getItem('my_company_tags');
-      if (savedTags) companyTags = JSON.parse(savedTags);
-    } catch(e) { companyTags = {}; }
-
     let activePopupCompany = null;
 
     const CAPITAL_DETAILED_REGIONS = [
@@ -618,18 +782,304 @@
       return normalizedJob === normalizedTarget;
     }
 
+    // ==================== [인증 / 로그인 / 블러 제어] ====================
+    function initAuth() {
+      try {
+        const savedUser = localStorage.getItem('my_job_map_user');
+        if (savedUser) {
+          currentUser = JSON.parse(savedUser);
+        }
+      } catch (e) {
+        currentUser = null;
+      }
+      applyAuthUI();
+      loadJobsFromServer();
+    }
+
+    function applyAuthUI() {
+      const overlay = document.getElementById('auth-overlay');
+      const mainContent = document.getElementById('main-content');
+      const headerActions = document.getElementById('header-actions');
+      const profileBadge = document.getElementById('user-profile-badge');
+      const adminBtn = document.getElementById('admin-panel-btn');
+      const importLabel = document.getElementById('import-btn-label');
+
+      if (currentUser) {
+        overlay.classList.add('hidden');
+        mainContent.classList.remove('locked-blur');
+        headerActions.classList.remove('hidden');
+
+        const roleIcon = currentUser.role === 'admin' ? '<i class="fa-solid fa-crown text-amber-500 mr-1"></i>' : '<i class="fa-solid fa-user text-blue-500 mr-1"></i>';
+        profileBadge.innerHTML = `${roleIcon}<span>${currentUser.nickname}</span><span class="text-[10px] text-slate-400 font-normal ml-1">(${currentUser.groupName || '멤버'})</span>`;
+
+        if (currentUser.role === 'admin') {
+          adminBtn.classList.remove('hidden');
+          importLabel.classList.remove('hidden');
+          checkPendingUsersCount();
+        } else {
+          adminBtn.classList.add('hidden');
+          importLabel.classList.add('hidden');
+        }
+      } else {
+        overlay.classList.remove('hidden');
+        mainContent.classList.add('locked-blur');
+        headerActions.classList.add('hidden');
+      }
+    }
+
+    function switchAuthTab(tab) {
+      const loginForm = document.getElementById('loginForm');
+      const regForm = document.getElementById('registerForm');
+      const tabLogin = document.getElementById('auth-tab-login');
+      const tabReg = document.getElementById('auth-tab-register');
+
+      if (tab === 'login') {
+        loginForm.classList.remove('hidden');
+        regForm.classList.add('hidden');
+        tabLogin.className = "py-2 rounded-lg bg-white text-blue-600 shadow-xs transition";
+        tabReg.className = "py-2 rounded-lg text-slate-600 hover:text-slate-900 transition";
+      } else {
+        loginForm.classList.add('hidden');
+        regForm.classList.remove('hidden');
+        tabReg.className = "py-2 rounded-lg bg-white text-indigo-600 shadow-xs transition";
+        tabLogin.className = "py-2 rounded-lg text-slate-600 hover:text-slate-900 transition";
+      }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value.trim();
+      const errBox = document.getElementById('login-error-msg');
+      errBox.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/jobs?action=login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          errBox.innerText = data.error || '로그인에 실패했습니다.';
+          errBox.classList.remove('hidden');
+          return;
+        }
+
+        currentUser = data.user;
+        localStorage.setItem('my_job_map_user', JSON.stringify(currentUser));
+        applyAuthUI();
+        await loadJobsFromServer();
+      } catch (err) {
+        errBox.innerText = '서버와 통신할 수 없습니다.';
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const inviteCode = document.getElementById('reg-invite-code').value.trim();
+      const username = document.getElementById('reg-username').value.trim();
+      const nickname = document.getElementById('reg-nickname').value.trim();
+      const password = document.getElementById('reg-password').value.trim();
+      const msgBox = document.getElementById('reg-status-msg');
+      msgBox.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/jobs?action=register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ inviteCode, username, nickname, password })
+        });
+        const data = await res.json();
+
+        msgBox.classList.remove('hidden');
+        if (!res.ok) {
+          msgBox.className = "p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-medium";
+          msgBox.innerText = data.error || '가입 신청 실패';
+          return;
+        }
+
+        msgBox.className = "p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 font-bold";
+        msgBox.innerText = data.message;
+        document.getElementById('registerForm').reset();
+      } catch (err) {
+        msgBox.classList.remove('hidden');
+        msgBox.className = "p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-medium";
+        msgBox.innerText = '서버 통신 오류가 발생했습니다.';
+      }
+    }
+
+    function logout() {
+      if (!confirm('로그아웃 하시겠습니까?')) return;
+      currentUser = null;
+      localStorage.removeItem('my_job_map_user');
+      companyTags = {};
+      applyAuthUI();
+      refreshUI();
+    }
+
+    // ==================== [관리자 패널 기능] ====================
+    async function checkPendingUsersCount() {
+      if (!currentUser || currentUser.role !== 'admin') return;
+      try {
+        const res = await fetch(`/api/jobs?action=admin_data&userId=${currentUser.id}`);
+        if (res.ok) {
+          const { users } = await res.json();
+          const pendingCount = (users || []).filter(u => u.status === 'pending').length;
+          const badge = document.getElementById('pending-user-badge');
+          if (pendingCount > 0) {
+            badge.innerText = pendingCount;
+            badge.classList.remove('hidden');
+          } else {
+            badge.classList.add('hidden');
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function openAdminModal() {
+      document.getElementById('admin-modal-backdrop').classList.remove('hidden');
+      await loadAdminData();
+    }
+
+    function closeAdminModal() {
+      document.getElementById('admin-modal-backdrop').classList.add('hidden');
+    }
+
+    async function loadAdminData() {
+      if (!currentUser || currentUser.role !== 'admin') return;
+      try {
+        const res = await fetch(`/api/jobs?action=admin_data&userId=${currentUser.id}`);
+        if (!res.ok) return;
+        const { users, codes } = await res.json();
+
+        // 1. 초대코드 렌더링
+        const codeContainer = document.getElementById('admin-invite-list');
+        if (!codes || codes.length === 0) {
+          codeContainer.innerHTML = `<span class="text-xs text-slate-400">아직 발급된 초대코드가 없습니다. 위에서 그룹명을 입력해 첫 초대코드를 만들어 보세요.</span>`;
+        } else {
+          codeContainer.innerHTML = codes.map(c => `
+            <div class="inline-flex items-center space-x-2 px-3 py-1.5 bg-white border border-indigo-200 rounded-lg text-xs shadow-2xs">
+              <span class="font-mono font-extrabold text-indigo-700">${c.code}</span>
+              <span class="text-slate-600 font-medium">(${c.group_name})</span>
+              <button onclick="copyInviteCode('${c.code}')" class="text-slate-400 hover:text-blue-600" title="코드 복사"><i class="fa-regular fa-copy"></i></button>
+              <button onclick="manageUserAction('delete_code', null, '${c.code}')" class="text-slate-400 hover:text-red-600" title="코드 삭제"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+          `).join('');
+        }
+
+        // 2. 회원 목록 렌더링
+        document.getElementById('admin-user-count').innerText = `총 ${users.length}명`;
+        const tbody = document.getElementById('admin-users-tbody');
+        tbody.innerHTML = users.map(u => {
+          const isPending = u.status === 'pending';
+          const isAdmin = u.role === 'admin';
+          return `
+            <tr class="${isPending ? 'bg-amber-50/60' : 'bg-white'}">
+              <td class="py-2.5 px-3">
+                ${isAdmin 
+                  ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">👑 관리자</span>' 
+                  : (isPending 
+                    ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 animate-pulse">승인 대기</span>' 
+                    : '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">활동 승인</span>')}
+              </td>
+              <td class="py-2.5 px-3 font-bold text-slate-800">${u.nickname} <span class="font-normal text-slate-400">(${u.username})</span></td>
+              <td class="py-2.5 px-3 text-slate-600">${u.group_name || '-'} <span class="font-mono text-[10px] text-indigo-600">[${u.invite_code || '-'}]</span></td>
+              <td class="py-2.5 px-3 text-slate-400 font-mono">${u.created_at || '-'}</td>
+              <td class="py-2.5 px-3 text-right space-x-1">
+                ${isPending ? `
+                  <button onclick="manageUserAction('approve', '${u.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md text-[11px] transition">승인 허가</button>
+                ` : ''}
+                <button onclick="resetUserPassword('${u.id}', '${u.nickname}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-[11px] transition">비번변경</button>
+                ${!isAdmin ? `
+                  <button onclick="manageUserAction('delete_user', '${u.id}')" class="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold rounded-md text-[11px] transition">강제탈퇴</button>
+                ` : ''}
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        checkPendingUsersCount();
+      } catch (e) {}
+    }
+
+    async function createInviteCode(e) {
+      e.preventDefault();
+      const groupName = document.getElementById('admin-group-name').value.trim();
+      const customCode = document.getElementById('admin-custom-code').value.trim();
+
+      try {
+        const res = await fetch('/api/jobs?action=create_invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminId: currentUser.id, groupName, customCode })
+        });
+        if (res.ok) {
+          document.getElementById('admin-group-name').value = '';
+          document.getElementById('admin-custom-code').value = '';
+          await loadAdminData();
+        }
+      } catch (err) {}
+    }
+
+    function copyInviteCode(code) {
+      navigator.clipboard.writeText(code);
+      alert(`초대코드 [${code}]가 복사되었습니다! 공유할 그룹 멤버에게 전달해 주세요.`);
+    }
+
+    async function manageUserAction(subAction, targetUserId, targetCode = '') {
+      if (subAction === 'delete_user' && !confirm('해당 회원을 강제 탈퇴 처리하시겠습니까?')) return;
+      if (subAction === 'delete_code' && !confirm(`초대코드 [${targetCode}]를 삭제하시겠습니까?`)) return;
+
+      try {
+        await fetch('/api/jobs?action=manage_user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminId: currentUser.id, subAction, targetUserId, targetCode })
+        });
+        await loadAdminData();
+      } catch (e) {}
+    }
+
+    async function resetUserPassword(targetUserId, nickname) {
+      const newPassword = prompt(`'${nickname}' 회원의 새로운 비밀번호를 입력해 주세요:`);
+      if (!newPassword || !newPassword.trim()) return;
+
+      try {
+        await fetch('/api/jobs?action=manage_user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminId: currentUser.id, subAction: 'reset_pw', targetUserId, newPassword: newPassword.trim() })
+        });
+        alert(`'${nickname}' 회원의 비밀번호가 변경되었습니다.`);
+      } catch (e) {}
+    }
+
+    // ==================== [데이터 로드 및 동기화] ====================
     async function loadJobsFromServer() {
       fallbackLocal();
       refreshUI();
 
       try {
-        const res = await fetch('/api/jobs');
+        const uidParam = currentUser ? `?userId=${encodeURIComponent(currentUser.id)}` : '';
+        const res = await fetch(`/api/jobs${uidParam}`);
         if (res.ok) {
           const serverData = await res.json();
           if (Array.isArray(serverData)) {
             if (serverData.length > 0) {
               jobs = serverData;
               localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
+            }
+            updateSyncBadge(true);
+          } else if (serverData && Array.isArray(serverData.jobs)) {
+            if (serverData.jobs.length > 0) {
+              jobs = serverData.jobs;
+              localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
+            }
+            if (serverData.companyTags) {
+              companyTags = serverData.companyTags;
             }
             updateSyncBadge(true);
           } else {
@@ -660,10 +1110,10 @@
       const badge = document.getElementById('sync-status-badge');
       if (!badge) return;
       if (isOnline) {
-        badge.className = "text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-medium px-2 py-0.5 rounded-full flex items-center gap-1";
+        badge.className = "hidden sm:flex text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-medium px-2 py-0.5 rounded-full items-center gap-1";
         badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> D1 클라우드 동기화`;
       } else {
-        badge.className = "text-[11px] bg-amber-50 text-amber-700 border border-amber-200 font-medium px-2 py-0.5 rounded-full flex items-center gap-1";
+        badge.className = "hidden sm:flex text-[11px] bg-amber-50 text-amber-700 border border-amber-200 font-medium px-2 py-0.5 rounded-full items-center gap-1";
         badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> 오프라인 모드`;
       }
     }
@@ -862,21 +1312,38 @@
       }
     }
 
-    function setCompanyTag(event, comp, tagType) {
+    async function setCompanyTag(event, comp, tagType) {
       event.stopPropagation();
+      let finalTag = tagType;
       if (companyTags[comp] === tagType || tagType === null) {
         delete companyTags[comp];
+        finalTag = null;
       } else {
         companyTags[comp] = tagType;
       }
-      localStorage.setItem('my_company_tags', JSON.stringify(companyTags));
+
       renderCompanyPool();
+      renderPostings();
+
+      if (currentUser) {
+        try {
+          await fetch('/api/jobs?action=save_tag', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: currentUser.id, company: comp, tag: finalTag })
+          });
+        } catch (e) {}
+      }
     }
 
     async function deleteCompanyFromPool(event, comp) {
       event.stopPropagation();
+      if (!currentUser || currentUser.role !== 'admin') {
+        alert('기업 풀 전체 삭제는 관리자만 가능합니다.');
+        return;
+      }
       const targetJobs = jobs.filter(j => j.company.trim().toLowerCase() === comp.toLowerCase());
-      const msg = `'${comp}' 기업을 기업 풀에서 삭제하시겠습니까?\n등록된 관련 공고 ${targetJobs.length}건이 함께 완전히 삭제됩니다.`;
+      const msg = `'${comp}' 기업을 기업 풀에서 삭제하시겠습니까?\n등록된 관련 공고 ${targetJobs.length}건이 모든 사용자의 화면에서 함께 삭제됩니다.`;
       
       if (!confirm(msg)) return;
 
@@ -888,23 +1355,22 @@
 
       jobs = jobs.filter(j => j.company.trim().toLowerCase() !== comp.toLowerCase());
       delete companyTags[comp];
-      localStorage.setItem('my_company_tags', JSON.stringify(companyTags));
       localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
 
       if (selectedCompany === comp) selectedCompany = null;
       activePopupCompany = null;
 
       refreshUI();
-      alert(`'${comp}' 기업 및 등록 공고가 성공적으로 삭제되었습니다.`);
+      alert(`'${comp}' 기업 및 등록 공고가 삭제되었습니다.`);
     }
 
     function getTagBadgeHtml(tag) {
       if (tag === 'check') {
-        return `<span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 font-black text-[10px] ml-0.5" title="지원 / 선호">✔</span>`;
+        return `<span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 font-black text-[10px] ml-0.5" title="내 선호/지원">✔</span>`;
       } else if (tag === 'cross') {
-        return `<span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-100 text-red-600 font-black text-[10px] ml-0.5" title="제외 / 불합격">✖</span>`;
+        return `<span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-100 text-red-600 font-black text-[10px] ml-0.5" title="내 제외/불합격">✖</span>`;
       } else if (tag === 'square') {
-        return `<span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-900 font-black text-[9px] ml-0.5" title="보류 / 대기">■</span>`;
+        return `<span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-900 font-black text-[9px] ml-0.5" title="내 보류/대기">■</span>`;
       }
       return '';
     }
@@ -985,6 +1451,8 @@
         return;
       }
 
+      const isAdmin = currentUser && currentUser.role === 'admin';
+
       container.innerHTML = companies.map(comp => {
         const isSelected = selectedCompany === comp;
         const count = compMap[comp];
@@ -1008,11 +1476,11 @@
             ${isPopupOpen ? `
               <div onclick="event.stopPropagation()" class="absolute left-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl shadow-xl p-2.5 w-60 text-xs flex flex-col space-y-2 animate-in fade-in zoom-in-95 duration-100">
                 <div class="flex items-center justify-between pb-1.5 border-b border-slate-100">
-                  <div class="truncate max-w-[150px]">
+                  <div class="truncate max-w-[140px]">
                     <span class="font-bold text-slate-800">${comp}</span>
                     <span class="block text-[10px] text-slate-400 font-normal"><i class="fa-solid fa-location-dot mr-1"></i>${belongRegion}</span>
                   </div>
-                  <span class="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">상태 태그</span>
+                  <span class="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">내 개인 태그</span>
                 </div>
 
                 <div class="grid grid-cols-3 gap-1.5 pt-0.5">
@@ -1038,10 +1506,12 @@
                     </button>
                   ` : `<span></span>`}
 
-                  <button onclick="deleteCompanyFromPool(event, '${comp}')" class="text-[11px] text-red-600 hover:text-red-700 font-medium flex items-center space-x-1 px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition">
-                    <i class="fa-regular fa-trash-can text-[10px]"></i>
-                    <span>기업 풀에서 삭제</span>
-                  </button>
+                  ${isAdmin ? `
+                    <button onclick="deleteCompanyFromPool(event, '${comp}')" class="text-[11px] text-red-600 hover:text-red-700 font-medium flex items-center space-x-1 px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition">
+                      <i class="fa-regular fa-trash-can text-[10px]"></i>
+                      <span>기업 삭제</span>
+                    </button>
+                  ` : `<span class="text-[10px] text-slate-400">나에게만 표시됨</span>`}
                 </div>
               </div>
             ` : ''}
@@ -1164,11 +1634,16 @@
         return;
       }
 
+      const isAdmin = currentUser && currentUser.role === 'admin';
+
       listContainer.innerHTML = filtered.map(job => {
         const dday = getDDay(job.deadline);
         const hasHistory = job.history && job.history.length > 0;
         const displayRegion = normalizeRegion(job.region);
         const tag = companyTags[job.company.trim()] || null;
+        const interestCnt = job.interestCount || 0;
+        const appliedCnt = job.appliedCount || 0;
+        const creator = job.createdBy || 'GH';
 
         let borderClass = "border border-slate-200 bg-white";
         if (dday.isExpired) {
@@ -1218,21 +1693,34 @@
                 <span class="text-xs px-2.5 py-0.5 rounded-full ${dday.color} shrink-0">${dday.text}</span>
               </div>
 
-              <div class="flex items-center space-x-2 text-xs text-slate-600 mb-3">
-                <span class="flex items-center space-x-1"><i class="fa-solid fa-location-dot text-slate-400"></i> <span>${displayRegion}</span></span>
-                <span>•</span>
-                <span>${dday.isExpired ? '공고 마감일' : '마감'}: <strong class="${dday.isAlways ? 'text-orange-700 font-bold' : (!dday.isExpired && dday.isUrgent ? 'text-rose-700 font-bold' : '')}">${deadlineText}</strong></span>
+              <!-- 권역 & 마감일 & 멤버 익명 현황 배지 -->
+              <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 mb-3">
+                <div class="flex items-center space-x-1.5">
+                  <span class="flex items-center space-x-1"><i class="fa-solid fa-location-dot text-slate-400"></i> <span>${displayRegion}</span></span>
+                  <span>•</span>
+                  <span>마감: <strong class="${dday.isAlways ? 'text-orange-700 font-bold' : (!dday.isExpired && dday.isUrgent ? 'text-rose-700 font-bold' : '')}">${deadlineText}</strong></span>
+                </div>
+
+                <!-- 공고별 멤버 관심/지원 완료 인원 카운트 (익명) -->
+                <div class="flex items-center space-x-1 text-[11px]">
+                  <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-semibold" title="이 공고를 관심/작성중으로 설정한 멤버 수">
+                    ⭐ 관심 ${interestCnt}
+                  </span>
+                  <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold" title="이 공고에 지원완료/면접 중인 멤버 수">
+                    📩 지원 ${appliedCnt}
+                  </span>
+                </div>
               </div>
 
               <div class="flex items-center justify-between p-2.5 bg-white/80 rounded-lg text-xs mb-3 border border-slate-200/80 shadow-2xs">
                 <div class="flex items-center space-x-2">
-                  <span class="text-slate-500 font-medium">전형:</span>
+                  <span class="text-slate-500 font-medium">내 상태:</span>
                   ${getStatusBadge(job.status)}
                 </div>
-                ${job.appliedDate ? `<span class="text-[11px] text-slate-500 font-mono"><i class="fa-regular fa-calendar-check mr-1 text-emerald-600"></i>${job.appliedDate} 접수</span>` : ''}
+                ${job.appliedDate ? `<span class="text-[11px] text-slate-500 font-mono"><i class="fa-regular fa-calendar-check mr-1 text-emerald-600"></i>${job.appliedDate} 접수</span>` : `<button onclick="editJob('${job.id}')" class="text-[11px] text-indigo-600 hover:underline font-medium">내 상태 변경</button>`}
               </div>
 
-              ${job.memo ? `<p class="text-xs text-slate-600 bg-white/90 p-2 rounded-lg border border-slate-200/80 mb-3 shadow-2xs"><i class="fa-regular fa-note-sticky text-blue-500 mr-1"></i>${job.memo}</p>` : ''}
+              ${job.memo ? `<p class="text-xs text-slate-600 bg-white/90 p-2 rounded-lg border border-slate-200/80 mb-3 shadow-2xs"><i class="fa-solid fa-lock text-indigo-400 mr-1 text-[10px]" title="나에게만 보이는 메모"></i>${job.memo}</p>` : ''}
 
               ${hasHistory ? `
                 <div class="mt-3 pt-3 border-t border-slate-200/70">
@@ -1248,9 +1736,7 @@
                         <div>
                           <span class="font-bold text-slate-700">[${hist.date}]</span>
                           <span class="text-slate-600 ml-1">${hist.title}</span>
-                          ${hist.note ? `<span class="block text-[10px] text-slate-500 mt-0.5">• ${hist.note}</span>` : ''}
                         </div>
-                        <span class="text-[10px] font-semibold text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded shadow-2xs">${hist.status}</span>
                       </div>
                     `).join('')}
                   </div>
@@ -1259,19 +1745,26 @@
             </div>
 
             <div class="mt-4 pt-3 border-t border-slate-200/70 flex items-center justify-between text-xs">
-              ${job.url ? `
-                <a href="${job.url}" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold flex items-center space-x-1">
-                  <span>공고 원문 보기</span>
-                  <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                </a>
-              ` : `<span></span>`}
+              <div class="flex items-center space-x-2">
+                ${job.url ? `
+                  <a href="${job.url}" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold flex items-center space-x-1">
+                    <span>공고 원문</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                  </a>
+                ` : ``}
+                <span class="text-[11px] text-slate-400 font-medium">• 등록: <strong class="text-slate-600">${creator}</strong></span>
+              </div>
+
               <div class="flex items-center space-x-1">
-                <button onclick="editJob('${job.id}')" title="공고 수정" class="text-slate-400 hover:text-blue-600 transition p-1.5 rounded-lg hover:bg-white/80">
+                <button onclick="editJob('${job.id}')" title="공고 수정 / 내 지원상태 변경" class="text-slate-500 hover:text-blue-600 transition px-2 py-1 rounded-lg hover:bg-white/80 flex items-center gap-1 text-[11px] font-medium">
                   <i class="fa-regular fa-pen-to-square"></i>
+                  <span>수정/내상태</span>
                 </button>
-                <button onclick="deleteJob('${job.id}')" title="아카이브 삭제" class="text-slate-400 hover:text-red-500 transition p-1.5 rounded-lg hover:bg-white/80">
-                  <i class="fa-regular fa-trash-can"></i>
-                </button>
+                ${isAdmin ? `
+                  <button onclick="deleteJob('${job.id}')" title="공고 영구 삭제 (관리자 전용)" class="text-slate-400 hover:text-red-500 transition p-1.5 rounded-lg hover:bg-white/80">
+                    <i class="fa-regular fa-trash-can"></i>
+                  </button>
+                ` : ''}
               </div>
             </div>
           </div>
@@ -1313,8 +1806,8 @@
 
       document.getElementById('jobForm').reset();
       document.getElementById('form-edit-id').value = job.id;
-      document.getElementById('modal-title').innerText = '채용 공고 수정';
-      document.getElementById('form-submit-btn').innerText = '수정 내용 반영';
+      document.getElementById('modal-title').innerText = '공고 정보 수정 & 내 지원상태 설정';
+      document.getElementById('form-submit-btn').innerText = '변경 내용 저장';
       document.getElementById('form-close-job-btn').classList.remove('hidden');
       document.getElementById('history-detect-banner').classList.add('hidden');
 
@@ -1351,17 +1844,17 @@
       const job = jobs[jobIndex];
       const todayStr = new Date().toISOString().slice(0, 10);
 
-      if (!confirm(`'${job.company} - ${job.title}' 공고를 마감 처리하시겠습니까?\n마감일이 오늘(${todayStr})로 기록되며, 검정 테두리와 함께 '역대 전체 아카이브' 탭으로 안전하게 보존·이동됩니다.`)) {
+      if (!confirm(`'${job.company} - ${job.title}' 공고를 마감 처리하시겠습니까?\n마감일이 오늘(${todayStr})로 기록되며, '역대 전체 아카이브' 탭으로 이동됩니다.`)) {
         return;
       }
 
       const updatedJob = {
         ...job,
-        deadline: todayStr
+        deadline: todayStr,
+        userId: currentUser ? currentUser.id : 'admin-1'
       };
 
       try {
-        await fetch(`/api/jobs?id=${editId}`, { method: 'DELETE' });
         await fetch('/api/jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1369,10 +1862,7 @@
         });
       } catch (e) {}
 
-      jobs[jobIndex] = updatedJob;
-      localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
-
-      refreshUI();
+      await loadJobsFromServer();
       closeModal();
       alert('공고가 마감 처리되어 역대 아카이브로 안전하게 이동되었습니다.');
     }
@@ -1400,7 +1890,7 @@
         const normRegion = normalizeRegion(match.region);
         regionSelect.value = normRegion;
         bannerText.innerHTML = `
-          <span>'<strong>${match.company}</strong>' 등록 이력이 있습니다. 이전 권역(<strong>${normRegion}</strong>)이 자동 선택되었습니다. 사업장이 다를 경우 아래 드롭다운에서 직접 변경하실 수 있습니다.</span>
+          <span>'<strong>${match.company}</strong>' 등록 이력이 있습니다. 이전 권역(<strong>${normRegion}</strong>)이 자동 선택되었습니다. 사업장이 다를 경우 직접 변경하실 수 있습니다.</span>
         `;
         banner.classList.remove('hidden');
       } else {
@@ -1444,19 +1934,18 @@
           url,
           status,
           appliedDate,
-          memo
+          memo,
+          userId: currentUser ? currentUser.id : 'admin-1',
+          createdBy: oldJob.createdBy || (currentUser ? currentUser.nickname : 'GH')
         };
 
         try {
-          await fetch(`/api/jobs?id=${editId}`, { method: 'DELETE' });
           await fetch('/api/jobs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updatedJob)
           });
         } catch(err) {}
-
-        if (oldIndex !== -1) jobs[oldIndex] = updatedJob;
       } else {
         const existing = jobs.find(j => j.company.toLowerCase() === company.toLowerCase());
         let historyList = [];
@@ -1468,7 +1957,7 @@
               date: existing.deadline || "과거 공고",
               title: existing.title,
               status: existing.status,
-              note: existing.memo || "과거 공고 연계"
+              note: "과거 공고 연계"
             }
           ];
         }
@@ -1483,7 +1972,9 @@
           status,
           appliedDate,
           memo,
-          history: historyList
+          history: historyList,
+          userId: currentUser ? currentUser.id : 'admin-1',
+          createdBy: currentUser ? currentUser.nickname : 'GH'
         };
 
         try {
@@ -1493,17 +1984,18 @@
             body: JSON.stringify(newJob)
           });
         } catch (err) {}
-
-        jobs.unshift(newJob);
       }
 
-      localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
-      refreshUI();
+      await loadJobsFromServer();
       closeModal();
     }
 
     async function deleteJob(id) {
-      if (confirm('이 공고를 클라우드 DB에서 완전히 삭제하시겠습니까?\n(아카이브에 남기지 않고 영구 삭제됩니다)')) {
+      if (!currentUser || currentUser.role !== 'admin') {
+        alert('공고 영구 삭제는 관리자만 가능합니다.');
+        return;
+      }
+      if (confirm('이 공고를 클라우드 DB에서 완전히 삭제하시겠습니까?\n(모든 사용자의 화면에서 영구 삭제됩니다)')) {
         try {
           await fetch(`/api/jobs?id=${id}`, { method: 'DELETE' });
         } catch (e) {}
@@ -1541,15 +2033,12 @@
             importList = imported;
           } else if (imported.jobs && Array.isArray(imported.jobs)) {
             importList = imported.jobs;
-            if (imported.companyTags) {
-              companyTags = { ...companyTags, ...imported.companyTags };
-              localStorage.setItem('my_company_tags', JSON.stringify(companyTags));
-            }
           }
 
           if (importList.length > 0) {
             for (const item of importList) {
               item.region = normalizeRegion(item.region);
+              item.userId = currentUser ? currentUser.id : 'admin-1';
               await fetch('/api/jobs', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1566,7 +2055,7 @@
       reader.readAsText(file);
     }
 
-    loadJobsFromServer();
+    initAuth();
   </script>
 </body>
 </html>
