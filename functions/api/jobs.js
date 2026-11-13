@@ -1,5 +1,5 @@
 // functions/api/jobs.js
-// 대소문자 무시 로그인 + 탈퇴 회원 실시간 접속 차단(세션 검증) + '관심' 상태 원천 차단 버전
+// 대소문자 무시 로그인 + 탈퇴 회원 실시간 접속 차단(세션 검증) + '관심' 상태 허용 버전
 
 const CORS_HEADERS = {
   "Content-Type": "application/json",
@@ -120,10 +120,12 @@ export async function onRequestGet(context) {
       if (!countsMap[row.job_id]) countsMap[row.job_id] = { interest: 0, applied: 0 };
       
       let s = row.status;
-      if (s === "관심") s = ""; // '관심' 상태 원천 배제
-
-      if (s === "서류작성중" || s === "서류작성") countsMap[row.job_id].interest += 1;
-      else if (s === "지원완료" || s === "면접예정" || s === "최종합격" || s === "1차면접") countsMap[row.job_id].applied += 1;
+      // '관심' 상태 허용 및 카운트 집계 반영
+      if (s === "관심" || s === "서류작성중" || s === "서류작성") {
+        countsMap[row.job_id].interest += 1;
+      } else if (s === "지원완료" || s === "면접예정" || s === "최종합격" || s === "1차면접") {
+        countsMap[row.job_id].applied += 1;
+      }
 
       if (userId && row.user_id === userId) {
         myStatusMap[row.job_id] = { ...row, status: s };
@@ -143,7 +145,6 @@ export async function onRequestGet(context) {
 
       const isAdminUser = (!userId || userId === "admin-1");
       let rawRowStatus = row.status;
-      if (rawRowStatus === "관심") rawRowStatus = "";
 
       const finalStatus = myData ? (myData.status || "") : (isAdminUser ? (rawRowStatus || "") : "");
       const finalAppliedDate = myData ? (myData.applied_date || "") : (isAdminUser ? (row.appliedDate || "") : "");
@@ -284,9 +285,8 @@ export async function onRequestPost(context) {
 
     const historyStr = JSON.stringify(data.history || []);
     
-    // '관심' 상태가 들어오면 무조건 공란("")으로 강제 정제
+    // '관심' 상태 허용
     let cleanStatus = data.status || "";
-    if (cleanStatus === "관심") cleanStatus = "";
 
     try {
       await db.prepare(`
