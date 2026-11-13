@@ -22,6 +22,24 @@
       filter: drop-shadow(0 2px 3px rgba(15, 23, 42, 0.06));
     }
 
+    /* 전국 지도 권역별 파스텔 컬러 지정 */
+    #grp-nat-수도권 .puzzle-piece { fill: #bae6fd; stroke: #0284c7; }
+    #grp-nat-강원권 .puzzle-piece { fill: #bbf7d0; stroke: #16a34a; }
+    #grp-nat-대전충청 .puzzle-piece { fill: #fed7aa; stroke: #ea580c; }
+    #grp-nat-전라권 .puzzle-piece { fill: #fef08a; stroke: #ca8a04; }
+    #grp-nat-경상권 .puzzle-piece { fill: #e9d5ff; stroke: #9333ea; }
+
+    /* 제주도, 울릉도, 독도 전용 고정 스타일 (클릭/호버 제외, 초록색 표시) */
+    .island-piece {
+      fill: #4ade80;
+      stroke: #15803d;
+      stroke-width: 2;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+      filter: drop-shadow(0 2px 3px rgba(15, 23, 42, 0.08));
+      pointer-events: none;
+    }
+
     .map-label-main {
       font-size: 13.5px;
       font-weight: 800;
@@ -370,42 +388,69 @@
           </g>
         </svg>
 
-        <svg id="svg-national-view" viewBox="0 0 960 540" class="w-full h-full select-none hidden">
+        <!-- 업데이트된 전국 광역권 지도 SVG -->
+        <svg id="svg-national-view" viewBox="0 0 960 600" class="w-full h-full select-none hidden">
+          <!-- 1. 수도권 (서울/경기/인천 통합 외곽선) -->
           <g class="region-group" id="grp-nat-수도권" onclick="filterByRegion('수도권 전체')">
-            <path class="puzzle-piece" d="M 168,35 L 480,35 L 480,95 C 480,104 506,95 506,112 C 506,129 480,120 480,129 L 480,190 L 327,190 C 318,190 327,216 310,216 C 293,216 302,190 293,190 L 140,190 L 140,63 Q 140,35 168,35 Z" />
-            <text x="310" y="105" class="map-label-main" style="font-size: 16px;">수도권</text>
-            <text x="310" y="128" class="map-label-sub" style="font-size: 12px;">(서울/경기/인천)</text>
-            <g class="region-badge" id="badge-nat-수도권" transform="translate(420, 80)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
+            <path class="puzzle-piece" d="M 385,65 C 365,68 348,82 342,98 C 332,96 318,108 322,122 C 305,124 292,135 294,148 C 282,150 278,164 290,170 C 304,174 316,170 322,182 C 312,190 302,198 308,210 C 316,220 332,216 340,225 C 352,235 372,238 392,232 C 412,226 426,216 442,208 C 452,190 458,172 456,156 C 442,148 430,136 428,120 C 425,102 405,78 385,65 Z" />
+            <circle class="puzzle-piece" cx="276" cy="142" r="5" />
+            <circle class="puzzle-piece" cx="272" cy="158" r="4" />
+            <circle class="puzzle-piece" cx="288" cy="192" r="4.5" />
+            <text x="382" y="152" class="map-label-main" style="font-size: 16px;">수도권</text>
+            <text x="382" y="172" class="map-label-sub" style="font-size: 11.5px; fill: #334155;">(서울/경기/인천)</text>
+            <g class="region-badge" id="badge-nat-수도권" transform="translate(428, 125)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
           </g>
 
+          <!-- 2. 강원권 (강원도 외곽선) -->
           <g class="region-group" id="grp-nat-강원권" onclick="filterByRegion('강원권')">
-            <path class="puzzle-piece" d="M 480,35 L 792,35 Q 820,35 820,63 L 820,190 L 667,190 C 658,190 667,216 650,216 C 633,216 642,190 633,190 L 480,190 L 480,129 C 480,120 506,129 506,112 C 506,95 480,104 480,95 L 480,35 Z" />
-            <text x="650" y="105" class="map-label-main" style="font-size: 16px;">강원권</text>
-            <text x="650" y="128" class="map-label-sub" style="font-size: 12px;">(원주/춘천)</text>
-            <g class="region-badge" id="badge-nat-강원권" transform="translate(760, 80)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
+            <path class="puzzle-piece" d="M 385,65 C 418,58 455,62 490,58 C 510,54 522,36 532,28 C 540,24 545,35 552,52 C 578,98 612,148 638,198 C 618,208 598,214 576,208 C 556,204 540,196 520,204 C 495,192 475,186 456,156 C 442,148 430,136 428,120 C 425,102 405,78 385,65 Z" />
+            <text x="525" y="132" class="map-label-main" style="font-size: 16px;">강원권</text>
+            <text x="525" y="152" class="map-label-sub" style="font-size: 11.5px; fill: #334155;">(원주/춘천)</text>
+            <g class="region-badge" id="badge-nat-강원권" transform="translate(575, 105)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
           </g>
 
+          <!-- 3. 대전·충청권 (충남/세종/대전/충북 통합 외곽선) -->
           <g class="region-group" id="grp-nat-대전충청" onclick="filterByRegion('대전/충청권')">
-            <path class="puzzle-piece" d="M 140,190 L 293,190 C 302,190 293,216 310,216 C 327,216 318,190 327,190 L 480,190 L 480,250 C 480,259 506,250 506,267 C 506,284 480,275 480,284 L 480,345 L 327,345 C 318,345 327,371 310,371 C 293,371 302,345 293,345 L 140,345 L 140,190 Z" />
-            <text x="310" y="262" class="map-label-main" style="font-size: 16px;">대전·충청</text>
-            <text x="310" y="285" class="map-label-sub" style="font-size: 12px;">(오송/대덕)</text>
-            <g class="region-badge" id="badge-nat-대전충청" transform="translate(420, 240)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
+            <path class="puzzle-piece" d="M 340,225 C 322,222 302,212 286,220 C 272,228 268,246 282,252 C 294,256 298,272 292,288 C 288,302 298,315 314,312 C 320,322 325,332 342,334 C 365,320 388,322 408,332 C 432,336 454,332 472,320 C 478,302 468,285 478,266 C 488,248 518,236 548,216 C 538,208 530,206 520,204 C 495,192 475,186 456,156 C 458,172 452,190 442,208 C 426,216 412,226 392,232 C 372,238 352,235 340,225 Z" />
+            <text x="392" y="275" class="map-label-main" style="font-size: 16px;">대전·충청</text>
+            <text x="392" y="295" class="map-label-sub" style="font-size: 11.5px; fill: #334155;">(오송/대덕)</text>
+            <g class="region-badge" id="badge-nat-대전충청" transform="translate(450, 250)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
           </g>
 
-          <g class="region-group" id="grp-nat-전라권" onclick="filterByRegion('전라권')">
-            <path class="puzzle-piece" d="M 140,345 L 293,345 C 302,345 293,371 310,371 C 327,371 318,345 327,345 L 480,345 L 480,405 C 480,414 454,405 454,422 C 454,439 480,430 480,439 L 480,500 L 168,500 Q 140,500 140,472 L 140,345 Z" />
-            <text x="310" y="418" class="map-label-main" style="font-size: 16px;">전라권</text>
-            <text x="310" y="441" class="map-label-sub" style="font-size: 12px;">(광주/전주/나주)</text>
-            <g class="region-badge" id="badge-nat-전라권" transform="translate(420, 395)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
-          </g>
-
+          <!-- 4. 경상권 (경북/대구/울산/부산/경남 통합 외곽선 - 내부 경계선 제거) -->
           <g class="region-group" id="grp-nat-경상권" onclick="filterByRegion('경상권')">
-            <path class="puzzle-piece" d="M 480,190 L 633,190 C 642,190 633,216 650,216 C 667,216 658,190 667,190 L 820,190 L 820,472 Q 820,500 792,500 L 480,500 L 480,439 C 480,430 454,439 454,422 C 454,405 480,414 480,405 L 480,345 L 480,284 C 480,275 506,284 506,267 C 506,250 480,259 480,250 L 480,190 Z" />
-            <text x="650" y="335" class="map-label-main" style="font-size: 16px;">경상권</text>
-            <text x="650" y="358" class="map-label-sub" style="font-size: 12px;">(대구/부산/포항)</text>
-            <g class="region-badge" id="badge-nat-경상권" transform="translate(760, 315)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
+            <path class="puzzle-piece" d="M 548,216 C 558,204 566,206 576,208 C 598,214 618,208 638,198 C 652,238 658,288 656,332 C 664,330 670,322 672,332 C 674,352 666,375 658,396 C 648,418 635,436 616,448 C 602,456 592,442 580,446 C 568,450 562,466 548,462 C 538,458 535,444 522,446 C 510,450 502,462 490,454 C 482,446 485,430 472,420 C 460,404 458,382 468,362 C 476,346 476,332 472,320 C 478,302 468,285 478,266 C 488,248 518,236 548,216 Z" />
+            <text x="572" y="330" class="map-label-main" style="font-size: 16px;">경상권</text>
+            <text x="572" y="350" class="map-label-sub" style="font-size: 11.5px; fill: #334155;">(대구/부산/포항)</text>
+            <g class="region-badge" id="badge-nat-경상권" transform="translate(625, 302)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
           </g>
 
+          <!-- 5. 전라권 (전북/광주/전남 통합 외곽선) -->
+          <g class="region-group" id="grp-nat-전라권" onclick="filterByRegion('전라권')">
+            <path class="puzzle-piece" d="M 342,334 C 365,320 388,322 408,332 C 432,336 454,332 472,320 C 476,332 476,346 468,362 C 458,382 460,404 472,420 C 480,432 478,452 466,462 C 454,470 444,456 435,462 C 426,468 424,486 410,488 C 396,490 392,474 378,478 C 364,482 352,498 334,502 C 318,504 312,490 322,478 C 306,476 292,486 284,474 C 278,462 294,448 286,438 C 276,428 268,416 284,408 C 296,402 302,390 294,380 C 288,370 302,356 318,354 C 330,352 336,342 342,334 Z" />
+            <circle class="puzzle-piece" cx="268" cy="445" r="5" />
+            <circle class="puzzle-piece" cx="262" cy="465" r="4.5" />
+            <circle class="puzzle-piece" cx="274" cy="488" r="6" />
+            <circle class="puzzle-piece" cx="298" cy="502" r="4.5" />
+            <text x="385" y="412" class="map-label-main" style="font-size: 16px;">전라권</text>
+            <text x="385" y="432" class="map-label-sub" style="font-size: 11.5px; fill: #334155;">(광주/전주/나주)</text>
+            <g class="region-badge" id="badge-nat-전라권" transform="translate(438, 385)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <!-- 6. 제주도 (단일 섬 덩어리, 초록색, 클릭 이벤트 없음) -->
+          <g class="pointer-events-none select-none">
+            <path class="island-piece" d="M 295,552 C 312,538 345,536 362,546 C 372,554 366,568 348,574 C 325,580 298,578 288,566 C 284,560 288,556 295,552 Z" />
+            <text x="396" y="566" class="map-label-main" style="font-size: 14px; fill: #1e293b;">제주도</text>
+          </g>
+
+          <!-- 7. 울릉도 / 독도 (8:2 크기 비율, 초록색, 클릭 이벤트 없음) -->
+          <g class="pointer-events-none select-none">
+            <path class="island-piece" d="M 758,152 C 768,140 788,140 796,150 C 804,160 798,176 784,182 C 768,186 752,178 752,164 C 752,158 754,155 758,152 Z" />
+            <text x="776" y="206" class="map-label-main" style="font-size: 15px; fill: #0f172a;">울릉도/독도</text>
+            <path class="island-piece" d="M 786,225 C 792,220 802,222 805,228 C 808,235 802,244 794,245 C 786,246 781,238 783,230 C 784,228 785,226 786,225 Z" />
+          </g>
+
+          <!-- 우측 상단 나침반 -->
           <g transform="translate(885, 25)">
             <circle cx="15" cy="15" r="13" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
             <polygon points="15,5 19,19 15,16 11,19" fill="#0284c7" />
