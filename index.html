@@ -118,18 +118,19 @@
       <div id="header-actions" class="hidden flex items-center space-x-2">
         <div id="user-profile-badge" class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700 border border-slate-200"></div>
 
+        <!-- 관리자 전용 버튼들 (관리자 패널 / 백업 / 복원) -->
         <button id="admin-panel-btn" onclick="openAdminModal()" class="hidden px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center space-x-1 transition shadow-2xs">
           <i class="fa-solid fa-crown text-amber-600"></i>
           <span>관리자</span>
           <span id="pending-user-badge" class="hidden ml-1 px-1.5 py-0.2 bg-red-500 text-white rounded-full text-[10px]">0</span>
         </button>
 
-        <button onclick="exportData()" class="px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center space-x-1 transition" title="JSON 백업 저장">
+        <button id="export-btn" onclick="exportData()" class="hidden px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center space-x-1 transition" title="JSON 백업 저장 (관리자 전용)">
           <i class="fa-solid fa-download"></i>
           <span class="hidden lg:inline">백업</span>
         </button>
 
-        <label id="import-btn-label" class="hidden px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center space-x-1 cursor-pointer transition" title="JSON 백업 복원">
+        <label id="import-btn-label" class="hidden px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center space-x-1 cursor-pointer transition" title="JSON 백업 복원 (관리자 전용)">
           <i class="fa-solid fa-upload"></i>
           <span class="hidden lg:inline">복원</span>
           <input type="file" id="importFileInput" onchange="importData(event)" class="hidden" accept=".json">
@@ -669,7 +670,6 @@
       loadJobsFromServer();
     }
 
-    // 탈퇴되었거나 권한이 박탈된 계정 발견 시 즉시 강제 로그아웃 및 캐시 삭제
     function forceKickOut() {
       currentUser = null;
       jobs = [];
@@ -687,6 +687,7 @@
       const headerActions = document.getElementById('header-actions');
       const profileBadge = document.getElementById('user-profile-badge');
       const adminBtn = document.getElementById('admin-panel-btn');
+      const exportBtn = document.getElementById('export-btn');
       const importLabel = document.getElementById('import-btn-label');
 
       if (currentUser) {
@@ -697,12 +698,15 @@
         const roleIcon = currentUser.role === 'admin' ? '<i class="fa-solid fa-crown text-amber-500 mr-1"></i>' : '<i class="fa-solid fa-user text-blue-500 mr-1"></i>';
         profileBadge.innerHTML = `${roleIcon}<span>${currentUser.nickname}</span><span class="text-[10px] text-slate-400 font-normal ml-1">(${currentUser.groupName || '멤버'})</span>`;
 
+        // 관리자일 때만 [관리자], [백업], [복원] 버튼을 모두 표시하고 일반 회원은 전부 숨김
         if (currentUser.role === 'admin') {
           adminBtn.classList.remove('hidden');
+          exportBtn.classList.remove('hidden');
           importLabel.classList.remove('hidden');
           checkPendingUsersCount();
         } else {
           adminBtn.classList.add('hidden');
+          exportBtn.classList.add('hidden');
           importLabel.classList.add('hidden');
         }
       } else {
@@ -963,7 +967,6 @@
         const uidParam = currentUser ? `?userId=${encodeURIComponent(currentUser.id)}&withTags=1` : '';
         const res = await fetch(`/api/jobs${uidParam}`, { cache: 'no-store' });
 
-        // [핵심] 탈퇴되었거나 권한이 없는 계정일 경우(401) 즉시 강제 로그아웃!
         if (res.status === 401 && currentUser) {
           forceKickOut();
           return;
