@@ -205,7 +205,7 @@
   </div>
 
   <main id="main-content" class="locked-blur max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-    <!-- 상단 통계 카드 (클릭 시 해당 탭 전환 및 스크롤 연동) -->
+    <!-- 상단 통계 카드 -->
     <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div onclick="filterByStatCard('all')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:border-blue-400 transition">
         <div>
@@ -422,7 +422,7 @@
       <div id="company-pool-container" class="flex flex-wrap gap-2 pt-1 relative"></div>
     </section>
 
-    <!-- 공고 리스트 섹션 (탭 4개 체계 및 마감공고 회색톤 적용) -->
+    <!-- 공고 리스트 섹션 -->
     <section id="job-list-section" class="space-y-4 scroll-mt-20">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
         <div class="flex items-center space-x-3">
@@ -613,7 +613,7 @@
     </div>
   </div>
 
-  <!-- 관리자 모달 (비밀번호 0000 초기화 기능 포함) -->
+  <!-- 관리자 모달 -->
   <div id="admin-modal-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto space-y-6">
       <div class="flex items-center justify-between pb-3 border-b border-slate-200">
@@ -1095,8 +1095,11 @@
           }
 
           if (list.length > 0) {
-            jobs = list;
-            migrateClearInterestStatus();
+            // 서버 및 기존 데이터에서 '관심' 상태를 '서류작성중'으로 강제 치환
+            jobs = list.map(j => ({
+              ...j,
+              status: (j.status === '관심' || !j.status) ? '서류작성중' : j.status
+            }));
             localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
           }
           updateSyncBadge(true);
@@ -1109,26 +1112,17 @@
       refreshUI();
     }
 
-    // 기존 '관심' 상태를 '서류작성중'으로 일괄 마이그레이션
-    function migrateClearInterestStatus() {
-      const isMigrated = localStorage.getItem('my_job_map_interest_cleared_v4');
-      if (!isMigrated) {
-        jobs = jobs.map(j => ({
-          ...j,
-          status: (j.status === '관심') ? '서류작성중' : (j.status || '서류작성중')
-        }));
-        localStorage.setItem('my_job_map_interest_cleared_v4', 'true');
-        localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
-      }
-    }
-
     function fallbackLocal() {
       const stored = localStorage.getItem('my_jobs_data');
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) jobs = parsed;
-          migrateClearInterestStatus();
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            jobs = parsed.map(j => ({
+              ...j,
+              status: (j.status === '관심' || !j.status) ? '서류작성중' : j.status
+            }));
+          }
         } catch(e) {}
       }
     }
@@ -1218,7 +1212,6 @@
       }
     }
 
-    // 상단 통계 카드 클릭 시 탭 및 스크롤 연동 기능
     function filterByStatCard(cardType) {
       if (cardType === 'active') {
         setArchiveTab('active');
@@ -1230,12 +1223,9 @@
       } else if (cardType === 'all') {
         setArchiveTab('all');
       }
-      
-      // 리스트 영역으로 부드럽게 스크롤 이동
       document.getElementById('job-list-section').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // 4개 탭 전환 처리 ('active' | 'alwaysOn' | 'archived' | 'all')
     function setArchiveTab(tab) {
       currentArchiveTab = tab;
       const tabActive = document.getElementById('tab-active-only');
@@ -1488,7 +1478,6 @@
       }
     }
 
-    // 공고 리스트 렌더링 (마감공고 탭은 채도가 낮은 회색톤 적용, 지역 옆 마감일 표기)
     function renderPostings() {
       const listContainer = document.getElementById('posting-list');
       const search = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -1509,7 +1498,7 @@
         } else if (currentArchiveTab === 'alwaysOn') {
           matchesTab = always;
         } else if (currentArchiveTab === 'archived') {
-          matchesTab = !always && expired; // 마감공고 탭에는 마감된 공고만 모아서 표시
+          matchesTab = !always && expired;
         } else if (currentArchiveTab === 'all') {
           matchesTab = true;
         }
@@ -1537,11 +1526,9 @@
         const dday = getDDay(job.deadline);
         const displayRegion = normalizeRegion(job.region);
         const tag = companyTags[(job.company || '').trim()] || null;
-        const interestCnt = job.interestCount || 0;
         const appliedCnt = job.appliedCount || 0;
         const creator = job.createdBy || '관리자';
 
-        // 마감공고 탭이거나 이미 만료된 공고는 채도가 낮은 회색톤 디자인 적용
         let borderClass = "border border-slate-200 bg-white";
         if (dday.isExpired || currentArchiveTab === 'archived') {
           borderClass = "border border-slate-300 bg-slate-100/80 text-slate-600 shadow-2xs";
@@ -1551,7 +1538,6 @@
           borderClass = "border-2 border-rose-500 bg-rose-50/60 shadow-xs";
         }
 
-        // 지역 옆에 표시할 마감일 문자열 (상시가 아닐 경우)
         const deadlineDateText = !isAlwaysOpen(job.deadline) ? `(~${job.deadline})` : '(상시)';
 
         return `
@@ -1567,7 +1553,6 @@
                 <span class="text-xs px-2.5 py-0.5 rounded-full ${dday.color} shrink-0">${dday.text}</span>
               </div>
 
-              <!-- 지역 뱃지 바로 옆에 정확한 마감일 날짜 표기 -->
               <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 mb-3">
                 <span class="flex items-center space-x-1.5">
                   <i class="fa-solid fa-location-dot text-slate-400"></i>
@@ -1616,7 +1601,6 @@
       }
     }
 
-    // 공고 등록 모달 열기 (기본 상태를 '서류작성중'으로 설정)
     function openModal() {
       document.getElementById('jobForm').reset();
       document.getElementById('form-edit-id').value = '';
@@ -1624,7 +1608,7 @@
       document.getElementById('form-submit-btn').innerText = '저장하기';
       document.getElementById('form-close-job-btn').classList.add('hidden');
       document.getElementById('form-always-open').checked = false;
-      document.getElementById('form-status').value = '서류작성중'; 
+      document.getElementById('form-status').value = '서류작성중';
       toggleAlwaysOpen();
       document.getElementById('history-detect-banner').classList.add('hidden');
       document.getElementById('modal-backdrop').classList.remove('hidden');
