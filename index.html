@@ -263,6 +263,27 @@
       </div>
 
       <div class="relative w-full h-[460px] sm:h-[540px] bg-gradient-to-b from-slate-50 to-slate-100/70 rounded-xl my-4 overflow-hidden border border-slate-200 flex items-center justify-center">
+        
+        <!-- 왼쪽 상단 고정 달력 위젯 (수도권 & 전국 공통 적용) -->
+        <div class="absolute top-3.5 left-3.5 z-20 pointer-events-none select-none">
+          <div class="bg-white/95 backdrop-blur-xs rounded-2xl shadow-md border border-slate-200/90 p-1.5 w-[74px] sm:w-[82px] text-center">
+            <div class="bg-white rounded-xl shadow-2xs border border-slate-100 overflow-hidden">
+              <!-- 상단: 빨간 바탕 + 흰색 월(月) 고정 -->
+              <div class="bg-[#d9463e] text-white text-[11px] sm:text-xs font-extrabold py-1 tracking-wider">
+                <span id="cal-widget-month">11月</span>
+              </div>
+              <!-- 중단: 일자 숫자 (요일별 색상 동적 변경) -->
+              <div class="py-1.5 sm:py-2 bg-white">
+                <span id="cal-widget-day" class="text-2xl sm:text-3xl font-black tracking-tight leading-none text-slate-900">14</span>
+              </div>
+            </div>
+            <!-- 하단: 요일 기준 -->
+            <div class="pt-1 pb-0.5 text-[10px] sm:text-[11px] font-bold text-slate-500">
+              <span id="cal-widget-dow">토 기준</span>
+            </div>
+          </div>
+        </div>
+
         <svg id="svg-capital-view" viewBox="-30 -20 1000 620" class="w-full h-full select-none">
           <defs>
             <linearGradient id="hanRiverGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -400,7 +421,7 @@
       <!-- 지도 하단 오늘 날짜 공통 표시 -->
       <div class="flex items-center justify-between pt-2 px-1 text-xs text-slate-500 border-t border-slate-100">
         <span class="font-medium flex items-center gap-1.5 text-slate-600">
-          <i class="fa-regular fa-calendar text-blue-500"></i> 📅 2026년 11월 14일 (토) 기준
+          <i class="fa-regular fa-calendar text-blue-500"></i> <span id="footer-today-text">📅 2026년 11월 14일 (토) 기준</span>
         </span>
         <span class="text-slate-400">수도권 및 전국 주요 거점 채용 아카이브</span>
       </div>
@@ -720,7 +741,48 @@
       return normalizedJob === normalizedTarget;
     }
 
+    // 달력 위젯 및 하단 날짜 동적 렌더링 (평일: 검정, 토: 파랑, 일/공휴일: 빨강)
+    function updateCalendarWidget() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      const date = now.getDate();
+      const day = now.getDay(); // 0: 일, 6: 토
+
+      const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+      const dayStr = dayNames[day];
+
+      // 주요 양력 공휴일 체크 (MM-DD)
+      const mmdd = `${String(month).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+      const solarHolidays = ['01-01', '03-01', '05-05', '06-06', '08-15', '10-03', '10-09', '12-25'];
+      const isHoliday = solarHolidays.includes(mmdd);
+
+      const monthEl = document.getElementById('cal-widget-month');
+      const dayEl = document.getElementById('cal-widget-day');
+      const dowEl = document.getElementById('cal-widget-dow');
+      const footerDateEl = document.getElementById('footer-today-text');
+
+      if (monthEl) monthEl.textContent = `${month}月`;
+      if (dowEl) dowEl.textContent = `${dayStr} 기준`;
+      if (dayEl) {
+        dayEl.textContent = date;
+        dayEl.className = 'text-2xl sm:text-3xl font-black tracking-tight leading-none ';
+        if (day === 0 || isHoliday) {
+          dayEl.className += 'text-red-600'; // 일요일 & 공휴일: 빨간 숫자
+        } else if (day === 6) {
+          dayEl.className += 'text-blue-600'; // 토요일: 파란 숫자
+        } else {
+          dayEl.className += 'text-slate-900'; // 평일: 검정 숫자
+        }
+      }
+
+      if (footerDateEl) {
+        footerDateEl.textContent = `📅 ${year}년 ${month}월 ${date}일 (${dayStr}) 기준`;
+      }
+    }
+
     function initAuth() {
+      updateCalendarWidget();
       try {
         const savedUser = localStorage.getItem('my_job_map_user');
         if (savedUser) currentUser = JSON.parse(savedUser);
@@ -1824,4 +1886,4 @@
     initAuth();
   </script>
 </body>
-</html> 
+</html>
