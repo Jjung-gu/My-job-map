@@ -1108,7 +1108,8 @@
           if (list.length > 0) {
             jobs = list.map(j => ({
               ...j,
-              startDate: j.startDate || j.deadline // fallback start date if missing
+              startDate: j.startDate || j.deadline,
+              status: j.status === '관심' ? '' : (j.status || '') // 기존 '관심' 상태를 공란으로 강제 초기화
             }));
             localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
           }
@@ -1130,7 +1131,8 @@
           if (Array.isArray(parsed) && parsed.length > 0) {
             jobs = parsed.map(j => ({
               ...j,
-              startDate: j.startDate || j.deadline
+              startDate: j.startDate || j.deadline,
+              status: j.status === '관심' ? '' : (j.status || '') // 로컬 데이터 내 '관심' 상태도 공란으로 초기화
             }));
           }
         } catch(e) {}
@@ -1235,7 +1237,6 @@
       document.getElementById('job-list-section').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // 5개 탭 체계 처리 ('active' | 'alwaysOn' | 'applied' | 'archived' | 'all')
     function setArchiveTab(tab) {
       currentArchiveTab = tab;
       const tabActive = document.getElementById('tab-active-only');
@@ -1304,7 +1305,6 @@
       highlightActiveMapRegions(); renderRegionChips(); renderCompanyPool(); renderPostings();
     }
 
-    // 기업 클릭 시 '역대 전체 아카이브' 탭으로 자동 전환 및 해당 기업 공고 집중 모아보기
     function handleCompanyClick(event, comp) {
       event.stopPropagation();
       if (selectedCompany === comp) {
@@ -1325,7 +1325,7 @@
           }
         }
         selectedCompany = comp; activePopupCompany = comp;
-        setArchiveTab('all'); // 역대 전체 아카이브 탭으로 이동
+        setArchiveTab('all');
         document.getElementById('job-list-section').scrollIntoView({ behavior: 'smooth' });
         renderCompanyPool(); renderPostings();
       }
@@ -1497,16 +1497,15 @@
       }
     }
 
-    // 공고 카테고리 순위 판별 (채용중 ➔ 지원한 원서 ➔ 마감된 공고 순 정렬용)
     function getJobCategoryRank(job) {
       const always = isAlwaysOpen(job.deadline);
       const expired = isExpired(job.deadline);
       const hasStatus = job.status && job.status.trim() !== '';
 
-      if (!always && !expired) return 1; // 1. 현재 채용중
-      if (always) return 2; // 2. 상시채용
-      if (hasStatus) return 3; // 3. 지원한 원서 / 전형 중
-      if (!always && expired) return 4; // 4. 마감된 공고
+      if (!always && !expired) return 1;
+      if (always) return 2;
+      if (hasStatus) return 3;
+      if (!always && expired) return 4;
       return 5;
     }
 
@@ -1531,7 +1530,7 @@
         } else if (currentArchiveTab === 'alwaysOn') {
           matchesTab = always;
         } else if (currentArchiveTab === 'applied') {
-          matchesTab = hasStatus; // 지원한 공고 탭 전용 필터
+          matchesTab = hasStatus;
         } else if (currentArchiveTab === 'archived') {
           matchesTab = !always && expired;
         } else if (currentArchiveTab === 'all') {
@@ -1541,7 +1540,6 @@
         return matchesRegion && matchesCompany && matchesSearch && matchesStatus && matchesTab;
       });
 
-      // 정렬 규칙 적용: 특정 기업을 선택했거나 전체 아카이브일 때 카테고리 순서 정렬
       if (selectedCompany && currentArchiveTab === 'all') {
         filtered.sort((a, b) => getJobCategoryRank(a) - getJobCategoryRank(b));
       } else if (currentArchiveTab === 'active') {
@@ -1576,7 +1574,6 @@
           borderClass = "border-2 border-rose-500 bg-rose-50/60 shadow-xs";
         }
 
-        // 공고 시작일 ~ 마감일 기간 표기
         const startDateStr = job.startDate || '-';
         const deadlineDateStr = isAlwaysOpen(job.deadline) ? '상시' : job.deadline;
         const periodText = `(${startDateStr} ~ ${deadlineDateStr})`;
@@ -1594,7 +1591,6 @@
                 <span class="text-xs px-2.5 py-0.5 rounded-full ${dday.color} shrink-0">${dday.text}</span>
               </div>
 
-              <!-- 지역 뱃지 및 시작일~마감일 기간 표기 -->
               <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 mb-3">
                 <span class="flex items-center space-x-1.5">
                   <i class="fa-solid fa-location-dot text-slate-400"></i>
@@ -1650,9 +1646,8 @@
       document.getElementById('form-submit-btn').innerText = '저장하기';
       document.getElementById('form-close-job-btn').classList.add('hidden');
       document.getElementById('form-always-open').checked = false;
-      document.getElementById('form-status').value = ''; // 기본값 공란
+      document.getElementById('form-status').value = '';
       
-      // 시작일 기본값 오늘 날짜 설정
       const todayStr = new Date().toISOString().slice(0, 10);
       document.getElementById('form-start-date').value = todayStr;
 
@@ -1727,7 +1722,7 @@
       const region = normalizeRegion(document.getElementById('form-region').value);
       let startDate = document.getElementById('form-start-date').value.trim();
       if (!startDate) {
-        startDate = new Date().toISOString().slice(0, 10); // 미입력 시 오늘 날짜 자동 지정
+        startDate = new Date().toISOString().slice(0, 10);
       }
       const isAlways = document.getElementById('form-always-open').checked;
       const deadline = isAlways ? '채용시마감' : document.getElementById('form-deadline').value;
