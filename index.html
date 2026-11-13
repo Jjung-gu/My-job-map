@@ -422,16 +422,19 @@
       <div id="company-pool-container" class="flex flex-wrap gap-2 pt-1 relative"></div>
     </section>
 
-    <!-- 공고 리스트 섹션 -->
+    <!-- 공고 리스트 섹션 (5개 탭 체계) -->
     <section id="job-list-section" class="space-y-4 scroll-mt-20">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
         <div class="flex items-center space-x-3">
           <div class="flex items-center bg-slate-100 p-1 rounded-lg text-xs font-semibold overflow-x-auto">
             <button id="tab-active-only" onclick="setArchiveTab('active')" class="px-3 py-1.5 rounded-md bg-white text-blue-600 shadow-xs transition whitespace-nowrap">
-              <i class="fa-solid fa-fire mr-1 text-blue-500"></i> 현재 채용
+              <i class="fa-solid fa-fire mr-1 text-blue-500"></i> 현재 채용중
             </button>
             <button id="tab-always-on" onclick="setArchiveTab('alwaysOn')" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap">
-              <i class="fa-solid fa-infinity mr-1 text-indigo-500"></i> 상시공고
+              <i class="fa-solid fa-infinity mr-1 text-indigo-500"></i> 상시채용
+            </button>
+            <button id="tab-applied" onclick="setArchiveTab('applied')" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap">
+              <i class="fa-solid fa-paper-plane mr-1 text-emerald-500"></i> 지원한 공고
             </button>
             <button id="tab-archived" onclick="setArchiveTab('archived')" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap">
               <i class="fa-solid fa-box-archive mr-1 text-slate-500"></i> 마감공고
@@ -447,10 +450,11 @@
           <input type="text" id="searchInput" oninput="renderPostings()" placeholder="회사명, 직무 검색..." class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-48">
           <select id="statusFilter" onchange="renderPostings()" class="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none">
             <option value="ALL">내 전체 전형 상태</option>
-            <option value="서류작성중">서류 작성 중</option>
-            <option value="지원완료">지원 완료</option>
-            <option value="1차면접">면접 전형</option>
-            <option value="최종합격">최종 합격</option>
+            <option value="관심">관심</option>
+            <option value="서류작성">서류작성</option>
+            <option value="지원완료">지원완료</option>
+            <option value="면접예정">면접예정</option>
+            <option value="최종합격">최종합격</option>
           </select>
         </div>
       </div>
@@ -488,32 +492,37 @@
             <input type="text" id="form-title" required placeholder="예: In vitro 효능 평가 연구원" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
           </div>
 
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">근무 권역 *</label>
+            <select id="form-region" required class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+              <optgroup label="수원 & 경기 남부 권역">
+                <option value="수원시">수원시</option>
+                <option value="화성시(동탄)">화성시(동탄)</option>
+                <option value="경기 남부 3구역">경기 남부 3구역 (성남·용인·하남)</option>
+                <option value="경기 남부 2구역">경기 남부 2구역 (안양·과천·군포·의왕)</option>
+                <option value="경기 남부 1구역">경기 남부 1구역 (부천·시흥·광명)</option>
+                <option value="인천광역시">인천광역시</option>
+              </optgroup>
+              <optgroup label="서울 권역 (4개)">
+                <option value="서울 강남권">서울 강남권 (서초·강남·송파)</option>
+                <option value="서울 서남부권">서울 서남부권 (강서·양천·영등포·동작)</option>
+                <option value="서울 남부권">서울 남부권 (구로·금천·관악)</option>
+                <option value="서울 강북권">서울 강북권 (마포·용산·종로·중구·성동 등)</option>
+              </optgroup>
+              <optgroup label="기타 전국 광역권">
+                <option value="수도권 전체">수도권 기타/전체</option>
+                <option value="대전/충청권">대전/충청권 (오송/대덕)</option>
+                <option value="경상권">경상권 (대구/부산/포항 등)</option>
+                <option value="전라권">전라권</option>
+                <option value="강원권">강원권</option>
+              </optgroup>
+            </select>
+          </div>
+
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">근무 권역 *</label>
-              <select id="form-region" required class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
-                <optgroup label="수원 & 경기 남부 권역">
-                  <option value="수원시">수원시</option>
-                  <option value="화성시(동탄)">화성시(동탄)</option>
-                  <option value="경기 남부 3구역">경기 남부 3구역 (성남·용인·하남)</option>
-                  <option value="경기 남부 2구역">경기 남부 2구역 (안양·과천·군포·의왕)</option>
-                  <option value="경기 남부 1구역">경기 남부 1구역 (부천·시흥·광명)</option>
-                  <option value="인천광역시">인천광역시</option>
-                </optgroup>
-                <optgroup label="서울 권역 (4개)">
-                  <option value="서울 강남권">서울 강남권 (서초·강남·송파)</option>
-                  <option value="서울 서남부권">서울 서남부권 (강서·양천·영등포·동작)</option>
-                  <option value="서울 남부권">서울 남부권 (구로·금천·관악)</option>
-                  <option value="서울 강북권">서울 강북권 (마포·용산·종로·중구·성동 등)</option>
-                </optgroup>
-                <optgroup label="기타 전국 광역권">
-                  <option value="수도권 전체">수도권 기타/전체</option>
-                  <option value="대전/충청권">대전/충청권 (오송/대덕)</option>
-                  <option value="경상권">경상권 (대구/부산/포항 등)</option>
-                  <option value="전라권">전라권</option>
-                  <option value="강원권">강원권</option>
-                </optgroup>
-              </select>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">공고 시작일</label>
+              <input type="date" id="form-start-date" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
             </div>
             <div>
               <div class="flex items-center justify-between mb-1">
@@ -544,10 +553,12 @@
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1">내 전형 상태</label>
               <select id="form-status" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                <option value="서류작성중">✍️ 서류 작성 중</option>
-                <option value="지원완료">📩 지원 완료</option>
-                <option value="1차면접">💬 면접 전형</option>
-                <option value="최종합격">🎉 최종 합격</option>
+                <option value="">선택 안 함 (공란)</option>
+                <option value="관심">⭐ 관심</option>
+                <option value="서류작성">✍️ 서류작성</option>
+                <option value="지원완료">📩 지원완료</option>
+                <option value="면접예정">💬 면접예정</option>
+                <option value="최종합격">🎉 최종합격</option>
               </select>
             </div>
             <div>
@@ -678,7 +689,7 @@
     let selectedRegion = null;
     let selectedCompany = null;
     let currentMapView = 'capital';
-    let currentArchiveTab = 'active'; // 'active' | 'alwaysOn' | 'archived' | 'all'
+    let currentArchiveTab = 'active'; // 'active' | 'alwaysOn' | 'applied' | 'archived' | 'all'
     let companyTags = {};
     let activePopupCompany = null;
 
@@ -1095,10 +1106,9 @@
           }
 
           if (list.length > 0) {
-            // 서버 및 기존 데이터에서 '관심' 상태를 '서류작성중'으로 강제 치환
             jobs = list.map(j => ({
               ...j,
-              status: (j.status === '관심' || !j.status) ? '서류작성중' : j.status
+              startDate: j.startDate || j.deadline // fallback start date if missing
             }));
             localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
           }
@@ -1120,7 +1130,7 @@
           if (Array.isArray(parsed) && parsed.length > 0) {
             jobs = parsed.map(j => ({
               ...j,
-              status: (j.status === '관심' || !j.status) ? '서류작성중' : j.status
+              startDate: j.startDate || j.deadline
             }));
           }
         } catch(e) {}
@@ -1160,7 +1170,7 @@
     function updateStats() {
       const uniqueCompanies = new Set(jobs.map(j => (j.company || '').trim().toLowerCase())).size;
       const activeJobs = jobs.filter(j => !isAlwaysOpen(j.deadline) && !isExpired(j.deadline)).length;
-      const appliedJobs = jobs.filter(j => j.status === '지원완료' || j.status === '1차면접' || j.status === '최종합격').length;
+      const appliedJobs = jobs.filter(j => j.status && j.status.trim() !== '').length;
       const archivedJobs = jobs.filter(j => !isAlwaysOpen(j.deadline) && isExpired(j.deadline)).length;
 
       document.getElementById('stat-companies').innerText = uniqueCompanies;
@@ -1216,8 +1226,7 @@
       if (cardType === 'active') {
         setArchiveTab('active');
       } else if (cardType === 'applied') {
-        setArchiveTab('active');
-        document.getElementById('statusFilter').value = '지원완료';
+        setArchiveTab('applied');
       } else if (cardType === 'archived') {
         setArchiveTab('archived');
       } else if (cardType === 'all') {
@@ -1226,15 +1235,18 @@
       document.getElementById('job-list-section').scrollIntoView({ behavior: 'smooth' });
     }
 
+    // 5개 탭 체계 처리 ('active' | 'alwaysOn' | 'applied' | 'archived' | 'all')
     function setArchiveTab(tab) {
       currentArchiveTab = tab;
       const tabActive = document.getElementById('tab-active-only');
       const tabAlwaysOn = document.getElementById('tab-always-on');
+      const tabApplied = document.getElementById('tab-applied');
       const tabArchived = document.getElementById('tab-archived');
       const tabAll = document.getElementById('tab-all-archive');
 
       tabActive.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap";
       tabAlwaysOn.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap";
+      tabApplied.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap";
       tabArchived.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap";
       tabAll.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition whitespace-nowrap";
 
@@ -1242,6 +1254,8 @@
         tabActive.className = "px-3 py-1.5 rounded-md bg-white text-blue-600 shadow-xs transition whitespace-nowrap";
       } else if (tab === 'alwaysOn') {
         tabAlwaysOn.className = "px-3 py-1.5 rounded-md bg-white text-indigo-600 shadow-xs transition whitespace-nowrap";
+      } else if (tab === 'applied') {
+        tabApplied.className = "px-3 py-1.5 rounded-md bg-white text-emerald-600 shadow-xs transition whitespace-nowrap";
       } else if (tab === 'archived') {
         tabArchived.className = "px-3 py-1.5 rounded-md bg-slate-700 text-white shadow-xs transition whitespace-nowrap";
       } else {
@@ -1290,6 +1304,7 @@
       highlightActiveMapRegions(); renderRegionChips(); renderCompanyPool(); renderPostings();
     }
 
+    // 기업 클릭 시 '역대 전체 아카이브' 탭으로 자동 전환 및 해당 기업 공고 집중 모아보기
     function handleCompanyClick(event, comp) {
       event.stopPropagation();
       if (selectedCompany === comp) {
@@ -1310,6 +1325,8 @@
           }
         }
         selectedCompany = comp; activePopupCompany = comp;
+        setArchiveTab('all'); // 역대 전체 아카이브 탭으로 이동
+        document.getElementById('job-list-section').scrollIntoView({ behavior: 'smooth' });
         renderCompanyPool(); renderPostings();
       }
     }
@@ -1469,13 +1486,28 @@
     }
 
     function getStatusBadge(status) {
+      if (!status) return '<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-400">선택 안 함</span>';
       switch(status) {
-        case '서류작성중': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">서류 작성 중</span>';
-        case '지원완료': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">지원 완료</span>';
-        case '1차면접': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">1차 면접 예정</span>';
-        case '최종합격': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-600 text-white">최종 합격</span>';
-        default: return `<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700">${status || '서류작성중'}</span>`;
+        case '관심': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">⭐ 관심</span>';
+        case '서류작성': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">✍️ 서류작성</span>';
+        case '지원완료': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">📩 지원완료</span>';
+        case '면접예정': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">💬 면접예정</span>';
+        case '최종합격': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-600 text-white">🎉 최종합격</span>';
+        default: return `<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700">${status}</span>`;
       }
+    }
+
+    // 공고 카테고리 순위 판별 (채용중 ➔ 지원한 원서 ➔ 마감된 공고 순 정렬용)
+    function getJobCategoryRank(job) {
+      const always = isAlwaysOpen(job.deadline);
+      const expired = isExpired(job.deadline);
+      const hasStatus = job.status && job.status.trim() !== '';
+
+      if (!always && !expired) return 1; // 1. 현재 채용중
+      if (always) return 2; // 2. 상시채용
+      if (hasStatus) return 3; // 3. 지원한 원서 / 전형 중
+      if (!always && expired) return 4; // 4. 마감된 공고
+      return 5;
     }
 
     function renderPostings() {
@@ -1491,12 +1523,15 @@
         
         const always = isAlwaysOpen(item.deadline);
         const expired = isExpired(item.deadline);
+        const hasStatus = item.status && item.status.trim() !== '';
 
         let matchesTab = true;
         if (currentArchiveTab === 'active') {
           matchesTab = !always && !expired;
         } else if (currentArchiveTab === 'alwaysOn') {
           matchesTab = always;
+        } else if (currentArchiveTab === 'applied') {
+          matchesTab = hasStatus; // 지원한 공고 탭 전용 필터
         } else if (currentArchiveTab === 'archived') {
           matchesTab = !always && expired;
         } else if (currentArchiveTab === 'all') {
@@ -1506,7 +1541,10 @@
         return matchesRegion && matchesCompany && matchesSearch && matchesStatus && matchesTab;
       });
 
-      if (currentArchiveTab === 'active') {
+      // 정렬 규칙 적용: 특정 기업을 선택했거나 전체 아카이브일 때 카테고리 순서 정렬
+      if (selectedCompany && currentArchiveTab === 'all') {
+        filtered.sort((a, b) => getJobCategoryRank(a) - getJobCategoryRank(b));
+      } else if (currentArchiveTab === 'active') {
         filtered.sort((a, b) => {
           const ddayA = getDDay(a.deadline), ddayB = getDDay(b.deadline);
           return ddayA.diff - ddayB.diff;
@@ -1538,7 +1576,10 @@
           borderClass = "border-2 border-rose-500 bg-rose-50/60 shadow-xs";
         }
 
-        const deadlineDateText = !isAlwaysOpen(job.deadline) ? `(~${job.deadline})` : '(상시)';
+        // 공고 시작일 ~ 마감일 기간 표기
+        const startDateStr = job.startDate || '-';
+        const deadlineDateStr = isAlwaysOpen(job.deadline) ? '상시' : job.deadline;
+        const periodText = `(${startDateStr} ~ ${deadlineDateStr})`;
 
         return `
           <div class="rounded-xl ${borderClass} p-5 transition flex flex-col justify-between relative overflow-hidden">
@@ -1553,11 +1594,12 @@
                 <span class="text-xs px-2.5 py-0.5 rounded-full ${dday.color} shrink-0">${dday.text}</span>
               </div>
 
+              <!-- 지역 뱃지 및 시작일~마감일 기간 표기 -->
               <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 mb-3">
                 <span class="flex items-center space-x-1.5">
                   <i class="fa-solid fa-location-dot text-slate-400"></i>
                   <span class="font-medium">${displayRegion}</span>
-                  <span class="text-[11px] text-slate-500 font-mono">${deadlineDateText}</span>
+                  <span class="text-[11px] text-slate-500 font-mono">${periodText}</span>
                 </span>
                 <div class="flex items-center space-x-1 text-[11px]">
                   <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">📩 지원 ${appliedCnt}</span>
@@ -1608,7 +1650,12 @@
       document.getElementById('form-submit-btn').innerText = '저장하기';
       document.getElementById('form-close-job-btn').classList.add('hidden');
       document.getElementById('form-always-open').checked = false;
-      document.getElementById('form-status').value = '서류작성중';
+      document.getElementById('form-status').value = ''; // 기본값 공란
+      
+      // 시작일 기본값 오늘 날짜 설정
+      const todayStr = new Date().toISOString().slice(0, 10);
+      document.getElementById('form-start-date').value = todayStr;
+
       toggleAlwaysOpen();
       document.getElementById('history-detect-banner').classList.add('hidden');
       document.getElementById('modal-backdrop').classList.remove('hidden');
@@ -1627,8 +1674,9 @@
       document.getElementById('form-company').value = job.company;
       document.getElementById('form-title').value = job.title;
       document.getElementById('form-region').value = normalizeRegion(job.region);
+      document.getElementById('form-start-date').value = job.startDate || new Date().toISOString().slice(0, 10);
       document.getElementById('form-url').value = job.url || '';
-      document.getElementById('form-status').value = job.status || '서류작성중';
+      document.getElementById('form-status').value = job.status || '';
       document.getElementById('form-applied-date').value = job.appliedDate || '';
       document.getElementById('form-memo').value = job.memo || '';
 
@@ -1677,6 +1725,10 @@
       const company = document.getElementById('form-company').value.trim();
       const title = document.getElementById('form-title').value.trim();
       const region = normalizeRegion(document.getElementById('form-region').value);
+      let startDate = document.getElementById('form-start-date').value.trim();
+      if (!startDate) {
+        startDate = new Date().toISOString().slice(0, 10); // 미입력 시 오늘 날짜 자동 지정
+      }
       const isAlways = document.getElementById('form-always-open').checked;
       const deadline = isAlways ? '채용시마감' : document.getElementById('form-deadline').value;
       const url = document.getElementById('form-url').value.trim();
@@ -1686,7 +1738,7 @@
 
       const payload = {
         id: editId || ("job-" + Date.now()),
-        company, title, region, deadline, url, status, appliedDate, memo,
+        company, title, region, startDate, deadline, url, status, appliedDate, memo,
         userId: currentUser ? currentUser.id : 'admin-1',
         createdBy: currentUser ? currentUser.nickname : '관리자'
       };
