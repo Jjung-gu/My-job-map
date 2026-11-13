@@ -1,5 +1,5 @@
 // functions/api/jobs.js
-// 원본(onRequestGet / onRequestPost / onRequestDelete) 구조 100% 유지 + 다중 사용자 완벽 지원 버전
+// 아이디/비밀번호/초대코드 대소문자 구분 없이 인식 + 원본 구조 100% 호환 버전
 
 const CORS_HEADERS = {
   "Content-Type": "application/json",
@@ -70,7 +70,6 @@ export async function onRequestGet(context) {
   try {
     await initMultiUserTables(db);
 
-    // 관리자 패널용 회원 & 초대코드 목록 조회
     if (action === "admin_data") {
       const { results: users } = await db.prepare(
         "SELECT id, username, nickname, role, status, invite_code, group_name, created_at FROM users"
@@ -81,7 +80,6 @@ export async function onRequestGet(context) {
       return new Response(JSON.stringify({ users: users || [], codes: codes || [] }), { headers: CORS_HEADERS });
     }
 
-    // 원본 그대로 jobs 테이블 조회
     let jobsRaw = [];
     try {
       const { results } = await db.prepare("SELECT * FROM jobs ORDER BY createdAt DESC").all();
@@ -91,7 +89,6 @@ export async function onRequestGet(context) {
       jobsRaw = results || [];
     }
 
-    // 개인별 상태 및 태그 조회
     let allStatuses = [];
     try {
       const stRes = await db.prepare("SELECT * FROM user_job_status").all();
@@ -130,7 +127,6 @@ export async function onRequestGet(context) {
       const myData = myStatusMap[row.id];
       const counts = countsMap[row.id] || { interest: 0, applied: 0 };
 
-      // 관리자는 기존 jobs 테이블의 상태/메모를 기본값으로 유지하고, 일반 회원은 본인이 설정한 상태만 표시
       const isAdminUser = (!userId || userId === "admin-1");
       const finalStatus = myData ? myData.status : (isAdminUser ? (row.status || "관심") : "관심");
       const finalAppliedDate = myData ? (myData.applied_date || "") : (isAdminUser ? (row.appliedDate || "") : "");
@@ -155,7 +151,6 @@ export async function onRequestGet(context) {
       };
     });
 
-    // 배열 형태로 내려주어 어떤 버전의 index.html에서도 즉시 인식되도록 보장
     if (url.searchParams.get("withTags") === "1") {
       return new Response(JSON.stringify({ jobs: formatted, companyTags: myTags }), { headers: CORS_HEADERS });
     }
@@ -175,11 +170,14 @@ export async function onRequestPost(context) {
     await initMultiUserTables(db);
     const body = await context.request.json();
 
-    // (A) 로그인
+    // (A) 로그인 (아이디 & 비밀번호 모두 대소문자 구분 없이 비교)
     if (action === "login") {
       const { username, password } = body;
-      const user = await db.prepare("SELECT * FROM users WHERE username = ? AND password = ?")
-        .bind((username || "").trim(), (password || "").trim())
+      const cleanUser = (username || "").trim().toLowerCase();
+      const cleanPw = (password || "").trim().toLowerCase();
+
+      const user = await db.prepare("SELECT * FROM users WHERE LOWER(username) = ? AND LOWER(password) = ?")
+        .bind(cleanUser, cleanPw)
         .first();
 
       if (!user) {
@@ -194,22 +192,25 @@ export async function onRequestPost(context) {
       }), { headers: CORS_HEADERS });
     }
 
-    // (B) 회원가입 신청
+    // (B) 회원가입 신청 (아이디 중복 체크 및 초대코드 대소문자 무시)
     if (action === "register") {
       const { username, password, nickname, inviteCode } = body;
       const cleanCode = (inviteCode || "").trim().toUpperCase();
-      const codeRow = await db.prepare("SELECT * FROM invite_codes WHERE code = ? AND is_active = 1").bind(cleanCode).first();
+      const cleanUser = (username || "").trim().toLowerCase();
+      const cleanPw = (password || "").trim().toLowerCase();
+
+      const codeRow = await db.prepare("SELECT * FROM invite_codes WHERE UPPER(code) = ? AND is_active = 1").bind(cleanCode).first();
       if (!codeRow) {
         return new Response(JSON.stringify({ error: "유효하지 않은 초대코드입니다." }), { status: 400, headers: CORS_HEADERS });
       }
 
-      const existingUser = await db.prepare("SELECT id FROM users WHERE username = ?").bind((username || "").trim()).first();
+      const existingUser = await db.prepare("SELECT id FROM users WHERE LOWER(username) = ?").bind(cleanUser).first();
       if (existingUser) {
         return new Response(JSON.stringify({ error: "이미 사용 중인 아이디입니다." }), { status: 400, headers: CORS_HEADERS });
       }
 
       await db.prepare("INSERT INTO users (id, username, password, nickname, role, status, invite_code, group_name, created_at) VALUES (?, ?, ?, ?, 'member', 'pending', ?, ?, ?)")
-        .bind("user-" + Date.now(), username.trim(), password.trim(), nickname.trim(), cleanCode, codeRow.group_name, new Date().toISOString().slice(0, 10))
+        .bind("user-" + Date.now(), cleanUser, cleanPw, (nickname || "").trim(), cleanCode, codeRow.group_name, new Date().toISOString().slice(0, 10))
         .run();
 
       return new Response(JSON.stringify({
@@ -229,14 +230,20 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ success: true, code, groupName }), { headers: CORS_HEADERS });
     }
 
-    // (D) 회원 및 코드 관리
+    // (D) 회원 및 코드 관리 (변경 시에도 소문자 정규화 적용)
     if (action === "manage_user") {
       const { targetUserId, subAction, newPassword, newUsername, newNickname, targetCode } = body;
-      if (subAction === "approve") await db.prepare("UPDATE users SET status = 'approved' WHERE id = ?").bind(targetUserId).run();
-      else if (subAction === "delete_user") await db.prepare("DELETE FROM users WHERE id = ? AND role != 'admin'").bind(targetUserId).run();
-      else if (subAction === "reset_pw") await db.prepare("UPDATE users SET password = ? WHERE id = ?").bind(newPassword, targetUserId).run();
-      else if (subAction === "change_account") await db.prepare("UPDATE users SET username = ?, nickname = ? WHERE id = ?").bind(newUsername, newNickname, targetUserId).run();
-      else if (subAction === "delete_code") await db.prepare("DELETE FROM invite_codes WHERE code = ?").bind(targetCode).run();
+      if (subAction === "approve") {
+        await db.prepare("UPDATE users SET status = 'approved' WHERE id = ?").bind(targetUserId).run();
+      } else if (subAction === "delete_user") {
+        await db.prepare("DELETE FROM users WHERE id = ? AND role != 'admin'").bind(targetUserId).run();
+      } else if (subAction === "reset_pw") {
+        await db.prepare("UPDATE users SET password = ? WHERE id = ?").bind((newPassword || "").trim().toLowerCase(), targetUserId).run();
+      } else if (subAction === "change_account") {
+        await db.prepare("UPDATE users SET username = ?, nickname = ? WHERE id = ?").bind((newUsername || "").trim().toLowerCase(), (newNickname || "").trim(), targetUserId).run();
+      } else if (subAction === "delete_code") {
+        await db.prepare("DELETE FROM invite_codes WHERE code = ?").bind(targetCode).run();
+      }
       return new Response(JSON.stringify({ success: true }), { headers: CORS_HEADERS });
     }
 
@@ -252,7 +259,6 @@ export async function onRequestPost(context) {
     const data = body;
     const historyStr = JSON.stringify(data.history || []);
 
-    // 기존 jobs 테이블 컬럼 구조 그대로 안전하게 저장
     try {
       await db.prepare(`
         INSERT OR REPLACE INTO jobs (id, company, title, region, deadline, url, status, appliedDate, memo, history, createdAt)
@@ -271,7 +277,6 @@ export async function onRequestPost(context) {
       ).run();
     }
 
-    // 개인별 상태 테이블에도 저장
     const targetUserId = data.userId || "admin-1";
     try {
       await db.prepare(`
