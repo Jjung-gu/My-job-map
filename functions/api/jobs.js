@@ -1,5 +1,5 @@
 // functions/api/jobs.js
-// 아이디/비밀번호/초대코드 대소문자 구분 없이 인식 + 원본 구조 100% 호환 버전
+// 대소문자 무시 로그인 + 탈퇴 회원 실시간 접속 차단(세션 검증) + 원본 구조 100% 호환 버전
 
 const CORS_HEADERS = {
   "Content-Type": "application/json",
@@ -69,6 +69,17 @@ export async function onRequestGet(context) {
 
   try {
     await initMultiUserTables(db);
+
+    // [핵심 보안 추가] 로그인된 userId가 넘어왔을 때, 실제로 존재하는 승인된 회원인지 실시간 검증
+    if (userId) {
+      const validUser = await db.prepare("SELECT id, status, role, nickname, group_name FROM users WHERE id = ?").bind(userId).first();
+      if (!validUser || validUser.status !== "approved") {
+        return new Response(JSON.stringify({ error: "SESSION_INVALID", message: "탈퇴되었거나 승인되지 않은 계정입니다." }), {
+          status: 401,
+          headers: CORS_HEADERS
+        });
+      }
+    }
 
     if (action === "admin_data") {
       const { results: users } = await db.prepare(
@@ -186,13 +197,16 @@ export async function onRequestPost(context) {
       if (user.status === "pending") {
         return new Response(JSON.stringify({ error: "현재 관리자 가입 승인 대기 중입니다." }), { status: 403, headers: CORS_HEADERS });
       }
+      if (user.status !== "approved") {
+        return new Response(JSON.stringify({ error: "접속 권한이 없는 계정입니다." }), { status: 403, headers: CORS_HEADERS });
+      }
 
       return new Response(JSON.stringify({
         user: { id: user.id, username: user.username, nickname: user.nickname, role: user.role, groupName: user.group_name }
       }), { headers: CORS_HEADERS });
     }
 
-    // (B) 회원가입 신청 (아이디 중복 체크 및 초대코드 대소문자 무시)
+    // (B) 회원가입 신청
     if (action === "register") {
       const { username, password, nickname, inviteCode } = body;
       const cleanCode = (inviteCode || "").trim().toUpperCase();
@@ -230,13 +244,15 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ success: true, code, groupName }), { headers: CORS_HEADERS });
     }
 
-    // (D) 회원 및 코드 관리 (변경 시에도 소문자 정규화 적용)
+    // (D) 회원 및 코드 관리 (강제 탈퇴 시 해당 회원의 기록도 함께 정리)
     if (action === "manage_user") {
       const { targetUserId, subAction, newPassword, newUsername, newNickname, targetCode } = body;
       if (subAction === "approve") {
         await db.prepare("UPDATE users SET status = 'approved' WHERE id = ?").bind(targetUserId).run();
       } else if (subAction === "delete_user") {
         await db.prepare("DELETE FROM users WHERE id = ? AND role != 'admin'").bind(targetUserId).run();
+        await db.prepare("DELETE FROM user_job_status WHERE user_id = ?").bind(targetUserId).run();
+        await db.prepare("DELETE FROM user_company_tags WHERE user_id = ?").bind(targetUserId).run();
       } else if (subAction === "reset_pw") {
         await db.prepare("UPDATE users SET password = ? WHERE id = ?").bind((newPassword || "").trim().toLowerCase(), targetUserId).run();
       } else if (subAction === "change_account") {
@@ -247,16 +263,29 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ success: true }), { headers: CORS_HEADERS });
     }
 
-    // (E) 기업 태그 저장
+    // (E) 기업 태그 저장 (유효한 회원인지 확인)
     if (action === "save_tag") {
       const { userId: uId, company, tag } = body;
+      if (uId) {
+        const checkU = await db.prepare("SELECT status FROM users WHERE id = ?").bind(uId).first();
+        if (!checkU || checkU.status !== "approved") {
+          return new Response(JSON.stringify({ error: "SESSION_INVALID" }), { status: 401, headers: CORS_HEADERS });
+        }
+      }
       if (!tag) await db.prepare("DELETE FROM user_company_tags WHERE user_id = ? AND company = ?").bind(uId, company).run();
       else await db.prepare("INSERT OR REPLACE INTO user_company_tags (user_id, company, tag) VALUES (?, ?, ?)").bind(uId, company, tag).run();
       return new Response(JSON.stringify({ success: true }), { headers: CORS_HEADERS });
     }
 
-    // (F) 기본: 공고 등록 및 수정
+    // (F) 기본: 공고 등록 및 수정 (탈퇴 회원이 공고를 등록하려는 시도 차단)
     const data = body;
+    if (data.userId) {
+      const checkU = await db.prepare("SELECT status FROM users WHERE id = ?").bind(data.userId).first();
+      if (!checkU || checkU.status !== "approved") {
+        return new Response(JSON.stringify({ error: "SESSION_INVALID" }), { status: 401, headers: CORS_HEADERS });
+      }
+    }
+
     const historyStr = JSON.stringify(data.history || []);
 
     try {
