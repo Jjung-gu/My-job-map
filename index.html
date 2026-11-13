@@ -227,7 +227,7 @@
       </div>
       <div onclick="filterByStatCard('applied')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between cursor-pointer hover:border-emerald-400 transition">
         <div>
-          <p class="text-xs text-slate-500 font-medium">내 지원 완료 / 전형 중</p>
+          <p class="text-xs text-slate-500 font-medium">지원 / 면접 / 합격 진행</p>
           <p id="stat-applied" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
         </div>
         <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -1108,8 +1108,7 @@
           if (list.length > 0) {
             jobs = list.map(j => ({
               ...j,
-              startDate: j.startDate || j.deadline,
-              status: j.status === '관심' ? '' : (j.status || '') // 기존 '관심' 상태를 공란으로 강제 초기화
+              startDate: j.startDate || j.deadline
             }));
             localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
           }
@@ -1131,8 +1130,7 @@
           if (Array.isArray(parsed) && parsed.length > 0) {
             jobs = parsed.map(j => ({
               ...j,
-              startDate: j.startDate || j.deadline,
-              status: j.status === '관심' ? '' : (j.status || '') // 로컬 데이터 내 '관심' 상태도 공란으로 초기화
+              startDate: j.startDate || j.deadline
             }));
           }
         } catch(e) {}
@@ -1172,7 +1170,7 @@
     function updateStats() {
       const uniqueCompanies = new Set(jobs.map(j => (j.company || '').trim().toLowerCase())).size;
       const activeJobs = jobs.filter(j => !isAlwaysOpen(j.deadline) && !isExpired(j.deadline)).length;
-      const appliedJobs = jobs.filter(j => j.status && j.status.trim() !== '').length;
+      const appliedJobs = jobs.filter(j => j.status === '지원완료' || j.status === '면접예정' || j.status === '최종합격').length;
       const archivedJobs = jobs.filter(j => !isAlwaysOpen(j.deadline) && isExpired(j.deadline)).length;
 
       document.getElementById('stat-companies').innerText = uniqueCompanies;
@@ -1305,6 +1303,7 @@
       highlightActiveMapRegions(); renderRegionChips(); renderCompanyPool(); renderPostings();
     }
 
+    // 기업 클릭 시 '역대 전체 아카이브' 탭으로 전환 및 해당 기업 공고 집중 모아보기
     function handleCompanyClick(event, comp) {
       event.stopPropagation();
       if (selectedCompany === comp) {
@@ -1325,7 +1324,7 @@
           }
         }
         selectedCompany = comp; activePopupCompany = comp;
-        setArchiveTab('all');
+        setArchiveTab('all'); // 역대 전체 아카이브 탭으로 자동 이동
         document.getElementById('job-list-section').scrollIntoView({ behavior: 'smooth' });
         renderCompanyPool(); renderPostings();
       }
@@ -1497,15 +1496,16 @@
       }
     }
 
+    // 기업 클릭 시 아카이브 탭에서 공고 카테고리 순서 정렬을 위한 순위 판별
     function getJobCategoryRank(job) {
       const always = isAlwaysOpen(job.deadline);
       const expired = isExpired(job.deadline);
-      const hasStatus = job.status && job.status.trim() !== '';
+      const isAppliedOrActive = (job.status === '지원완료' || job.status === '면접예정' || job.status === '최종합격');
 
-      if (!always && !expired) return 1;
-      if (always) return 2;
-      if (hasStatus) return 3;
-      if (!always && expired) return 4;
+      if (!always && !expired) return 1; // 1. 현재 채용중
+      if (always) return 2; // 2. 상시채용
+      if (isAppliedOrActive) return 3; // 3. 지원한 공고
+      if (!always && expired) return 4; // 4. 마감된 공고
       return 5;
     }
 
@@ -1522,7 +1522,7 @@
         
         const always = isAlwaysOpen(item.deadline);
         const expired = isExpired(item.deadline);
-        const hasStatus = item.status && item.status.trim() !== '';
+        const isAppliedTabMatch = (item.status === '지원완료' || item.status === '면접예정' || item.status === '최종합격');
 
         let matchesTab = true;
         if (currentArchiveTab === 'active') {
@@ -1530,7 +1530,7 @@
         } else if (currentArchiveTab === 'alwaysOn') {
           matchesTab = always;
         } else if (currentArchiveTab === 'applied') {
-          matchesTab = hasStatus;
+          matchesTab = isAppliedTabMatch; // 지원완료, 면접예정, 최종합격 포함
         } else if (currentArchiveTab === 'archived') {
           matchesTab = !always && expired;
         } else if (currentArchiveTab === 'all') {
@@ -1540,8 +1540,11 @@
         return matchesRegion && matchesCompany && matchesSearch && matchesStatus && matchesTab;
       });
 
+      // 정렬 규칙: 특정 기업을 클릭한 상태라면 카테고리 순서대로, 아니면 평소 아카이브 탭은 가나다순 정렬
       if (selectedCompany && currentArchiveTab === 'all') {
         filtered.sort((a, b) => getJobCategoryRank(a) - getJobCategoryRank(b));
+      } else if (currentArchiveTab === 'all' && !selectedCompany) {
+        filtered.sort((a, b) => (a.company || '').localeCompare(b.company || '', 'ko', { sensitivity: 'base' }));
       } else if (currentArchiveTab === 'active') {
         filtered.sort((a, b) => {
           const ddayA = getDDay(a.deadline), ddayB = getDDay(b.deadline);
@@ -1562,7 +1565,11 @@
         const dday = getDDay(job.deadline);
         const displayRegion = normalizeRegion(job.region);
         const tag = companyTags[(job.company || '').trim()] || null;
+        
+        // 관심 카운트 및 지원 카운트 숫자 표기
+        const interestCnt = job.interestCount || 0;
         const appliedCnt = job.appliedCount || 0;
+
         const creator = job.createdBy || '관리자';
 
         let borderClass = "border border-slate-200 bg-white";
@@ -1591,6 +1598,7 @@
                 <span class="text-xs px-2.5 py-0.5 rounded-full ${dday.color} shrink-0">${dday.text}</span>
               </div>
 
+              <!-- 지역 및 시작일 ~ 마감일 기간 표기 -->
               <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 mb-3">
                 <span class="flex items-center space-x-1.5">
                   <i class="fa-solid fa-location-dot text-slate-400"></i>
@@ -1598,7 +1606,7 @@
                   <span class="text-[11px] text-slate-500 font-mono">${periodText}</span>
                 </span>
                 <div class="flex items-center space-x-1 text-[11px]">
-                  <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">📩 지원 ${appliedCnt}</span>
+                  <span class="px-2 py-0.5 rounded bg-slate-50 text-slate-700 border border-slate-200 font-bold">⭐ 관심 ${interestCnt}명 | 📩 지원 ${appliedCnt}명</span>
                 </div>
               </div>
 
@@ -1646,10 +1654,10 @@
       document.getElementById('form-submit-btn').innerText = '저장하기';
       document.getElementById('form-close-job-btn').classList.add('hidden');
       document.getElementById('form-always-open').checked = false;
-      document.getElementById('form-status').value = '';
+      document.getElementById('form-status').value = ''; // 기본값 공란
       
       const todayStr = new Date().toISOString().slice(0, 10);
-      document.getElementById('form-start-date').value = todayStr;
+      document.getElementById('form-start-date').value = todayStr; // 시작일 기본값 오늘 날짜
 
       toggleAlwaysOpen();
       document.getElementById('history-detect-banner').classList.add('hidden');
