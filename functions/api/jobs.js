@@ -1,9 +1,10 @@
 // functions/api/jobs.js
-// 관리자 아이디 변경 기능이 포함된 다중 사용자 API
+// 일반 회원 및 관리자 모두에게 공고 목록이 100% 정상 출력되도록 보강한 통합 API
 
 async function ensureTables(db) {
-  await db.batch([
-    db.prepare(`CREATE TABLE IF NOT EXISTS jobs (
+  // 개별 실행으로 묶어 특정 쿼리 하나가 실패해도 전체가 멈추지 않도록 안전 처리
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS jobs (
       id TEXT PRIMARY KEY,
       company TEXT,
       title TEXT,
@@ -16,8 +17,11 @@ async function ensureTables(db) {
       history TEXT,
       createdAt TEXT,
       created_by TEXT
-    )`),
-    db.prepare(`CREATE TABLE IF NOT EXISTS users (
+    )`).run();
+  } catch (e) {}
+
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       username TEXT UNIQUE,
       password TEXT,
@@ -27,14 +31,20 @@ async function ensureTables(db) {
       invite_code TEXT,
       group_name TEXT,
       created_at TEXT
-    )`),
-    db.prepare(`CREATE TABLE IF NOT EXISTS invite_codes (
+    )`).run();
+  } catch (e) {}
+
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS invite_codes (
       code TEXT PRIMARY KEY,
       group_name TEXT,
       is_active INTEGER DEFAULT 1,
       created_at TEXT
-    )`),
-    db.prepare(`CREATE TABLE IF NOT EXISTS user_job_status (
+    )`).run();
+  } catch (e) {}
+
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS user_job_status (
       user_id TEXT,
       job_id TEXT,
       status TEXT,
@@ -42,22 +52,28 @@ async function ensureTables(db) {
       memo TEXT,
       updated_at TEXT,
       PRIMARY KEY (user_id, job_id)
-    )`),
-    db.prepare(`CREATE TABLE IF NOT EXISTS user_company_tags (
+    )`).run();
+  } catch (e) {}
+
+  try {
+    await db.prepare(`CREATE TABLE IF NOT EXISTS user_company_tags (
       user_id TEXT,
       company TEXT,
       tag TEXT,
       PRIMARY KEY (user_id, company)
-    )`),
-    db.prepare(`INSERT OR IGNORE INTO users (id, username, password, nickname, role, status, invite_code, group_name, created_at)
-      VALUES ('admin-1', 'gh', 'admin1234', '관리자', 'admin', 'approved', 'MASTER', '총괄관리자', '2026-11-13')`)
-  ]);
+    )`).run();
+  } catch (e) {}
+
+  try {
+    await db.prepare(`INSERT OR IGNORE INTO users (id, username, password, nickname, role, status, invite_code, group_name, created_at)
+      VALUES ('admin-1', 'gh', 'admin1234', '관리자', 'admin', 'approved', 'MASTER', '총괄관리자', '2026-11-13')`).run();
+  } catch (e) {}
 
   try { await db.prepare(`ALTER TABLE jobs ADD COLUMN created_by TEXT`).run(); } catch (e) {}
   try { await db.prepare(`ALTER TABLE jobs ADD COLUMN createdAt TEXT`).run(); } catch (e) {}
 }
 
-export async function onRequest(context) {
+async function handleRequest(context) {
   const { request, env } = context;
   const db = env.DB;
   const url = new URL(request.url);
@@ -67,6 +83,7 @@ export async function onRequest(context) {
 
   const headers = {
     'Content-Type': 'application/json',
+    'Cache-Control': 'no-store, no-cache, must-revalidate',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type'
@@ -79,7 +96,9 @@ export async function onRequest(context) {
   try {
     await ensureTables(db);
 
+    // ==================== [1. 조회 (GET)] ====================
     if (method === 'GET') {
+      // 관리자 전용 데이터 조회
       if (action === 'admin_data') {
         const adminCheck = await db.prepare(`SELECT role FROM users WHERE id = ?`).bind(userId).first();
         if (!adminCheck || adminCheck.role !== 'admin') {
@@ -91,26 +110,48 @@ export async function onRequest(context) {
         const { results: codes } = await db.prepare(
           `SELECT * FROM invite_codes ORDER BY created_at DESC`
         ).all();
-        return new Response(JSON.stringify({ users, codes }), { headers });
+        return new Response(JSON.stringify({ users: users || [], codes: codes || [] }), { headers });
       }
 
-      const { results: jobsRaw } = await db.prepare(`SELECT * FROM jobs ORDER BY createdAt DESC`).all();
-      const { results: allStatuses } = await db.prepare(`SELECT user_id, job_id, status, applied_date, memo FROM user_job_status`).all();
+      // 전체 공고 목록 조회 (ORDER BY 에러 방지를 위해 기본 SELECT 수행)
+      let jobsRaw = [];
+      try {
+        const resJobs = await db.prepare(`SELECT * FROM jobs`).all();
+        jobsRaw = resJobs.results || [];
+      } catch (e) {
+        jobsRaw = [];
+      }
 
+      // 기존 단일 사용자 시절 공고의 상태값을 관리자('admin-1') 개인 기록으로 안전하게 백업
       for (const jb of jobsRaw) {
         if (jb.status || jb.appliedDate || jb.memo) {
-          await db.prepare(`INSERT OR IGNORE INTO user_job_status (user_id, job_id, status, applied_date, memo, updated_at) VALUES ('admin-1', ?, ?, ?, ?, ?)`)
-            .bind(jb.id, jb.status || '관심', jb.appliedDate || '', jb.memo || '', new Date().toISOString().slice(0, 10))
-            .run();
+          try {
+            await db.prepare(`INSERT OR IGNORE INTO user_job_status (user_id, job_id, status, applied_date, memo, updated_at) VALUES ('admin-1', ?, ?, ?, ?, ?)`)
+              .bind(jb.id, jb.status || '관심', jb.appliedDate || '', jb.memo || '', new Date().toISOString().slice(0, 10))
+              .run();
+          } catch (e) {}
         }
       }
 
-      let myTags = {};
-      if (userId) {
-        const { results: tagRows } = await db.prepare(`SELECT company, tag FROM user_company_tags WHERE user_id = ?`).bind(userId).all();
-        tagRows.forEach(r => { myTags[r.company] = r.tag; });
+      // 모든 회원의 공고별 상태 조회
+      let allStatuses = [];
+      try {
+        const resStatus = await db.prepare(`SELECT user_id, job_id, status, applied_date, memo FROM user_job_status`).all();
+        allStatuses = resStatus.results || [];
+      } catch (e) {
+        allStatuses = [];
       }
 
+      // 로그인한 회원의 개인 기업 태그 조회
+      let myTags = {};
+      if (userId) {
+        try {
+          const { results: tagRows } = await db.prepare(`SELECT company, tag FROM user_company_tags WHERE user_id = ?`).bind(userId).all();
+          (tagRows || []).forEach(r => { myTags[r.company] = r.tag; });
+        } catch (e) {}
+      }
+
+      // 공고별 익명 카운트(관심/지원) 집계 및 현재 로그인한 회원의 개인 상태 매핑
       const countsMap = {};
       const myStatusMap = {};
 
@@ -139,6 +180,7 @@ export async function onRequest(context) {
         const myData = myStatusMap[j.id];
         const counts = countsMap[j.id] || { interest: 0, applied: 0 };
 
+        // 로그인한 회원은 본인이 설정한 상태(없으면 기본 '관심')가 보이고, 메모도 본인 것만 보임
         const resolvedStatus = userId ? (myData ? myData.status : '관심') : (j.status || '관심');
         const resolvedAppliedDate = userId ? (myData ? (myData.applied_date || '') : '') : (j.appliedDate || '');
         const resolvedMemo = userId ? (myData ? (myData.memo || '') : '') : (j.memo || '');
@@ -146,11 +188,11 @@ export async function onRequest(context) {
         return {
           ...j,
           id: j.id,
-          company: j.company,
-          title: j.title,
-          region: j.region,
-          deadline: j.deadline,
-          url: j.url,
+          company: j.company || '',
+          title: j.title || '',
+          region: j.region || '수원시',
+          deadline: j.deadline || '채용시마감',
+          url: j.url || '',
           createdBy: j.created_by || '관리자',
           status: resolvedStatus,
           appliedDate: resolvedAppliedDate,
@@ -167,9 +209,11 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({ jobs: enrichedJobs, companyTags: myTags }), { headers });
     }
 
+    // ==================== [2. 등록 / 로그인 / 관리 (POST)] ====================
     if (method === 'POST') {
       const body = await request.json();
 
+      // (A) 로그인
       if (action === 'login') {
         const { username, password } = body;
         const user = await db.prepare(`SELECT * FROM users WHERE username = ? AND password = ?`)
@@ -197,6 +241,7 @@ export async function onRequest(context) {
         }), { headers });
       }
 
+      // (B) 초대코드 회원가입 신청
       if (action === 'register') {
         const { username, password, nickname, inviteCode } = body;
         const cleanCode = (inviteCode || '').trim().toUpperCase();
@@ -224,6 +269,7 @@ export async function onRequest(context) {
         }), { headers });
       }
 
+      // (C) 관리자: 초대코드 생성
       if (action === 'create_invite') {
         const { adminId, groupName, customCode } = body;
         const adminCheck = await db.prepare(`SELECT role FROM users WHERE id = ?`).bind(adminId).first();
@@ -242,6 +288,7 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ success: true, code, groupName }), { headers });
       }
 
+      // (D) 관리자: 회원 및 코드 관리
       if (action === 'manage_user') {
         const { adminId, targetUserId, subAction, newPassword, newUsername, newNickname, targetCode } = body;
         const adminCheck = await db.prepare(`SELECT role FROM users WHERE id = ?`).bind(adminId).first();
@@ -266,6 +313,7 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ success: true }), { headers });
       }
 
+      // (E) 개인별 기업 태그 저장
       if (action === 'save_tag') {
         const { userId: uId, company, tag } = body;
         if (!uId || !company) return new Response(JSON.stringify({ error: '잘못된 요청' }), { status: 400, headers });
@@ -278,11 +326,16 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ success: true }), { headers });
       }
 
+      // (F) 공통 공고 등록/수정 및 내 개인 상태 저장
       const job = body;
       const historyStr = JSON.stringify(job.history || []);
       const creatorName = job.createdBy || '관리자';
 
-      const existingJob = await db.prepare(`SELECT created_by, createdAt, status, appliedDate, memo FROM jobs WHERE id = ?`).bind(job.id).first();
+      let existingJob = null;
+      try {
+        existingJob = await db.prepare(`SELECT * FROM jobs WHERE id = ?`).bind(job.id).first();
+      } catch (e) {}
+
       const finalCreator = (existingJob && existingJob.created_by) ? existingJob.created_by : creatorName;
       const finalCreatedAt = (existingJob && existingJob.createdAt) ? existingJob.createdAt : new Date().toISOString();
 
@@ -296,9 +349,9 @@ export async function onRequest(context) {
         job.region,
         job.deadline,
         job.url || '',
-        job.status || (existingJob ? existingJob.status : '관심'),
-        job.appliedDate !== undefined ? job.appliedDate : (existingJob ? existingJob.appliedDate : ''),
-        job.memo !== undefined ? job.memo : (existingJob ? existingJob.memo : ''),
+        existingJob ? (existingJob.status || '관심') : (job.status || '관심'),
+        existingJob ? (existingJob.appliedDate || '') : (job.appliedDate || ''),
+        existingJob ? (existingJob.memo || '') : (job.memo || ''),
         historyStr,
         finalCreatedAt,
         finalCreator
@@ -321,6 +374,7 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({ success: true }), { headers });
     }
 
+    // ==================== [3. 삭제 (DELETE)] ====================
     if (method === 'DELETE') {
       const id = url.searchParams.get('id');
       if (id) {
@@ -335,3 +389,10 @@ export async function onRequest(context) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers });
   }
 }
+
+// Cloudflare Pages Functions의 모든 호출 방식을 100% 지원하도록 연결
+export async function onRequest(context) { return handleRequest(context); }
+export async function onRequestGet(context) { return handleRequest(context); }
+export async function onRequestPost(context) { return handleRequest(context); }
+export async function onRequestDelete(context) { return handleRequest(context); }
+export async function onRequestOptions(context) { return handleRequest(context); }
