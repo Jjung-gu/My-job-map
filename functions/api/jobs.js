@@ -1,5 +1,5 @@
 // functions/api/jobs.js
-// 대소문자 무시 로그인 + 탈퇴 회원 실시간 접속 차단(세션 검증) + 원본 구조 100% 호환 버전
+// 대소문자 무시 로그인 + 탈퇴 회원 실시간 접속 차단(세션 검증) + '관심' 상태 원천 차단 버전
 
 const CORS_HEADERS = {
   "Content-Type": "application/json",
@@ -70,7 +70,6 @@ export async function onRequestGet(context) {
   try {
     await initMultiUserTables(db);
 
-    // [핵심 보안 추가] 로그인된 userId가 넘어왔을 때, 실제로 존재하는 승인된 회원인지 실시간 검증
     if (userId) {
       const validUser = await db.prepare("SELECT id, status, role, nickname, group_name FROM users WHERE id = ?").bind(userId).first();
       if (!validUser || validUser.status !== "approved") {
@@ -119,11 +118,15 @@ export async function onRequestGet(context) {
 
     allStatuses.forEach(row => {
       if (!countsMap[row.job_id]) countsMap[row.job_id] = { interest: 0, applied: 0 };
-      if (row.status === "관심" || row.status === "서류작성중") countsMap[row.job_id].interest += 1;
-      else if (row.status === "지원완료" || row.status === "1차면접" || row.status === "최종합격") countsMap[row.job_id].applied += 1;
+      
+      let s = row.status;
+      if (s === "관심") s = ""; // '관심' 상태 원천 배제
+
+      if (s === "서류작성중" || s === "서류작성") countsMap[row.job_id].interest += 1;
+      else if (s === "지원완료" || s === "면접예정" || s === "최종합격" || s === "1차면접") countsMap[row.job_id].applied += 1;
 
       if (userId && row.user_id === userId) {
-        myStatusMap[row.job_id] = row;
+        myStatusMap[row.job_id] = { ...row, status: s };
       }
     });
 
@@ -139,16 +142,15 @@ export async function onRequestGet(context) {
       const counts = countsMap[row.id] || { interest: 0, applied: 0 };
 
       const isAdminUser = (!userId || userId === "admin-1");
-      const finalStatus = myData ? myData.status : (isAdminUser ? (row.status || "관심") : "관심");
+      let rawRowStatus = row.status;
+      if (rawRowStatus === "관심") rawRowStatus = "";
+
+      const finalStatus = myData ? (myData.status || "") : (isAdminUser ? (rawRowStatus || "") : "");
       const finalAppliedDate = myData ? (myData.applied_date || "") : (isAdminUser ? (row.appliedDate || "") : "");
       const finalMemo = myData ? (myData.memo || "") : (isAdminUser ? (row.memo || "") : "");
 
       let interestCount = counts.interest;
       let appliedCount = counts.applied;
-      if (!myStatusMap[row.id] && row.status) {
-        if (row.status === "관심" || row.status === "서류작성중") interestCount = Math.max(1, interestCount);
-        if (row.status === "지원완료" || row.status === "1차면접" || row.status === "최종합격") appliedCount = Math.max(1, appliedCount);
-      }
 
       return {
         ...row,
@@ -181,7 +183,6 @@ export async function onRequestPost(context) {
     await initMultiUserTables(db);
     const body = await context.request.json();
 
-    // (A) 로그인 (아이디 & 비밀번호 모두 대소문자 구분 없이 비교)
     if (action === "login") {
       const { username, password } = body;
       const cleanUser = (username || "").trim().toLowerCase();
@@ -206,7 +207,6 @@ export async function onRequestPost(context) {
       }), { headers: CORS_HEADERS });
     }
 
-    // (B) 회원가입 신청
     if (action === "register") {
       const { username, password, nickname, inviteCode } = body;
       const cleanCode = (inviteCode || "").trim().toUpperCase();
@@ -233,7 +233,6 @@ export async function onRequestPost(context) {
       }), { headers: CORS_HEADERS });
     }
 
-    // (C) 초대코드 생성
     if (action === "create_invite") {
       const { groupName, customCode } = body;
       const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -244,7 +243,6 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ success: true, code, groupName }), { headers: CORS_HEADERS });
     }
 
-    // (D) 회원 및 코드 관리 (강제 탈퇴 시 해당 회원의 기록도 함께 정리)
     if (action === "manage_user") {
       const { targetUserId, subAction, newPassword, newUsername, newNickname, targetCode } = body;
       if (subAction === "approve") {
@@ -263,7 +261,6 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ success: true }), { headers: CORS_HEADERS });
     }
 
-    // (E) 기업 태그 저장 (유효한 회원인지 확인)
     if (action === "save_tag") {
       const { userId: uId, company, tag } = body;
       if (uId) {
@@ -277,7 +274,6 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ success: true }), { headers: CORS_HEADERS });
     }
 
-    // (F) 기본: 공고 등록 및 수정 (탈퇴 회원이 공고를 등록하려는 시도 차단)
     const data = body;
     if (data.userId) {
       const checkU = await db.prepare("SELECT status FROM users WHERE id = ?").bind(data.userId).first();
@@ -287,6 +283,10 @@ export async function onRequestPost(context) {
     }
 
     const historyStr = JSON.stringify(data.history || []);
+    
+    // '관심' 상태가 들어오면 무조건 공란("")으로 강제 정제
+    let cleanStatus = data.status || "";
+    if (cleanStatus === "관심") cleanStatus = "";
 
     try {
       await db.prepare(`
@@ -294,7 +294,7 @@ export async function onRequestPost(context) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT createdAt FROM jobs WHERE id = ?), datetime('now')))
       `).bind(
         data.id, data.company, data.title, data.region, data.deadline,
-        data.url || "", data.status || "관심", data.appliedDate || "", data.memo || "", historyStr, data.id
+        data.url || "", cleanStatus, data.appliedDate || "", data.memo || "", historyStr, data.id
       ).run();
     } catch (errSql) {
       await db.prepare(`
@@ -302,7 +302,7 @@ export async function onRequestPost(context) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         data.id, data.company, data.title, data.region, data.deadline,
-        data.url || "", data.status || "관심", data.appliedDate || "", data.memo || "", historyStr
+        data.url || "", cleanStatus, data.appliedDate || "", data.memo || "", historyStr
       ).run();
     }
 
@@ -311,7 +311,7 @@ export async function onRequestPost(context) {
       await db.prepare(`
         INSERT OR REPLACE INTO user_job_status (user_id, job_id, status, applied_date, memo, updated_at)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).bind(targetUserId, data.id, data.status || "관심", data.appliedDate || "", data.memo || "", new Date().toISOString().slice(0, 10)).run();
+      `).bind(targetUserId, data.id, cleanStatus, data.appliedDate || "", data.memo || "", new Date().toISOString().slice(0, 10)).run();
     } catch (e) {}
 
     return new Response(JSON.stringify({ success: true }), { headers: CORS_HEADERS });
