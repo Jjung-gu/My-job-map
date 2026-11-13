@@ -3,756 +3,1581 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>내일의 지도 (My Job Map)</title>
+  <title>내일의 지도 - 커리어 로드맵 & 거점별 채용 공고 아카이브</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-    body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
+    body { font-family: 'Pretendard', sans-serif; }
     
-    /* 마감 임박 빨간 테두리 (상/우/하단 및 외곽 강조) */
-    .deadline-imminent {
-      border-top: 2px solid #ef4444 !important;
-      border-right: 2px solid #ef4444 !important;
-      border-bottom: 2px solid #ef4444 !important;
-      box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.15);
+    .region-group { cursor: pointer; }
+
+    .puzzle-piece {
+      transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+      stroke: #334155;
+      stroke-width: 2.2;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+      fill: #f1f5f9;
+      filter: drop-shadow(0 2px 3px rgba(15, 23, 42, 0.06));
     }
 
-    /* 상태별 좌측 컬러 액센트 바 (가독성 핵심) */
-    .status-bar-none { border-left: 5px solid #cbd5e1 !important; }
-    .status-bar-interested { border-left: 5px solid #f59e0b !important; background-color: rgba(254, 252, 232, 0.25); }
-    .status-bar-applied { border-left: 5px solid #3b82f6 !important; background-color: rgba(239, 246, 255, 0.25); }
-
-    /* 퍼즐 직소맵 노드 스타일 */
-    .puzzle-node {
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      cursor: pointer;
+    .map-label-main {
+      font-size: 13.5px;
+      font-weight: 800;
+      fill: #0f172a;
+      text-anchor: middle;
+      pointer-events: none;
+      user-select: none;
+      transition: fill 0.2s ease;
     }
-    .puzzle-node:hover {
+    .map-label-sub {
+      font-size: 10.5px;
+      font-weight: 600;
+      fill: #64748b;
+      text-anchor: middle;
+      pointer-events: none;
+      user-select: none;
+      transition: fill 0.2s ease;
+    }
+
+    .region-group:hover .puzzle-piece {
+      fill: #cbd5e1 !important;
+      stroke: #0284c7 !important;
+      stroke-width: 3;
+      transform: translateY(-3px);
+      filter: drop-shadow(0 8px 14px rgba(2, 132, 199, 0.22));
+    }
+
+    .region-group.active .puzzle-piece {
+      fill: #2563eb !important;
+      stroke: #1e3a8a !important;
+      stroke-width: 3.2;
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      filter: drop-shadow(0 8px 18px rgba(37, 99, 235, 0.35));
+    }
+    .region-group.active .map-label-main,
+    .region-group.active .map-label-sub {
+      fill: #ffffff !important;
+    }
+
+    .region-badge {
+      pointer-events: none;
+      user-select: none;
+    }
+    .badge-circle {
+      fill: #ef4444;
+      stroke: #ffffff;
+      stroke-width: 2;
+      filter: drop-shadow(0 2px 4px rgba(239, 68, 68, 0.45));
+    }
+    .badge-text {
+      font-size: 11px;
+      font-weight: 800;
+      fill: #ffffff;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    .river-flow {
+      stroke: url(#hanRiverGrad);
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 3px 6px rgba(14, 165, 233, 0.3));
+    }
+
+    .locked-blur {
+      filter: blur(11px);
+      pointer-events: none;
+      user-select: none;
+      opacity: 0.65;
+      transition: all 0.35s ease;
     }
   </style>
 </head>
-<body class="text-slate-800">
+<body class="bg-slate-50 text-slate-800 min-h-screen" onclick="closeCompanyPopupOutside(event)">
 
-  <!-- 상단 네비게이션 헤더 -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
-        <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-          M
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+          <i class="fa-solid fa-briefcase text-lg"></i>
         </div>
         <div>
-          <h1 class="text-lg font-bold text-slate-900 tracking-tight">내일의 지도</h1>
-          <p class="text-xs text-slate-500">커리어 로드맵 & 채용 아카이브</p>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg font-bold text-slate-900 tracking-tight">내일의 지도</h1>
+            <span class="text-xs bg-indigo-100 text-indigo-700 font-semibold px-2 py-0.5 rounded-full">GH Edition</span>
+            <span id="sync-status-badge" class="hidden sm:flex text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-medium px-2 py-0.5 rounded-full items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> D1 클라우드 동기화
+            </span>
+          </div>
+          <p class="text-xs text-slate-500">수도권 거점별 기업 DB & 역대 채용 아카이브</p>
         </div>
       </div>
 
-      <!-- 상단 컨트롤 버튼 (공고 등록, 회원 정보수정, 관리자) -->
-      <div class="flex items-center space-x-2">
-        <button onclick="openJobModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold shadow-sm transition flex items-center space-x-1">
-          <span>+ 공고 등록</span>
+      <div id="header-actions" class="hidden flex items-center space-x-2">
+        <div id="user-profile-badge" class="hidden md:flex items-center space-x-1.5 px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-semibold text-slate-700 border border-slate-200"></div>
+
+        <!-- 관리자 전용 버튼들 (관리자 패널 / 백업 / 복원) -->
+        <button id="admin-panel-btn" onclick="openAdminModal()" class="hidden px-3 py-1.5 text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg flex items-center space-x-1 transition shadow-2xs">
+          <i class="fa-solid fa-crown text-amber-600"></i>
+          <span>관리자</span>
+          <span id="pending-user-badge" class="hidden ml-1 px-1.5 py-0.2 bg-red-500 text-white rounded-full text-[10px]">0</span>
         </button>
-        <button onclick="openProfileModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-sm font-medium transition">
-          정보수정
+
+        <button id="export-btn" onclick="exportData()" class="hidden px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center space-x-1 transition" title="JSON 백업 저장 (관리자 전용)">
+          <i class="fa-solid fa-download"></i>
+          <span class="hidden lg:inline">백업</span>
         </button>
-        <button onclick="openAdminModal()" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2 rounded-xl text-sm font-medium transition">
-          관리자
+
+        <label id="import-btn-label" class="hidden px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center space-x-1 cursor-pointer transition" title="JSON 백업 복원 (관리자 전용)">
+          <i class="fa-solid fa-upload"></i>
+          <span class="hidden lg:inline">복원</span>
+          <input type="file" id="importFileInput" onchange="importData(event)" class="hidden" accept=".json">
+        </label>
+
+        <button onclick="openModal()" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm flex items-center space-x-1.5 transition">
+          <i class="fa-solid fa-plus"></i>
+          <span>공고 등록</span>
+        </button>
+
+        <button onclick="logout()" class="px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-red-600 bg-slate-100 hover:bg-red-50 rounded-lg transition" title="로그아웃">
+          <i class="fa-solid fa-right-from-bracket"></i>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- 메인 컨테이너 -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    
-    <!-- 지역 뷰 전환 및 상태 범례 바 -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-      <div class="flex items-center space-x-2">
-        <span class="text-xs font-bold uppercase tracking-wider text-slate-400 mr-1">지역 뷰</span>
-        <button onclick="switchRegionMode('capital')" id="region-btn-capital" class="px-3.5 py-1.5 rounded-xl text-sm font-bold bg-blue-600 text-white transition shadow-xs">
-          수도권
-        </button>
-        <button onclick="switchRegionMode('national')" id="region-btn-national" class="px-3.5 py-1.5 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
-          전국
-        </button>
-        <button onclick="resetRegionFilter()" class="text-xs text-slate-500 hover:text-blue-600 underline ml-2">
-          필터 초기화
-        </button>
+  <div id="auth-overlay" class="fixed inset-0 top-16 z-30 flex items-center justify-center p-4 bg-slate-900/25 backdrop-blur-[2px]">
+    <div class="bg-white/95 backdrop-blur-md rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="text-center mb-5">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/25">
+          <i class="fa-solid fa-lock text-xl"></i>
+        </div>
+        <h2 class="text-lg font-extrabold text-slate-900">내일의 지도 멤버십 로그인</h2>
+        <p class="text-xs text-slate-500 mt-1">승인된 멤버만 지도 및 채용 아카이브를 열람할 수 있습니다.</p>
       </div>
 
-      <!-- 상태 가독성 범례 -->
-      <div class="flex flex-wrap items-center gap-3 text-xs">
-        <span class="flex items-center gap-1.5 font-medium text-slate-600">
-          <span class="w-2.5 h-4 bg-slate-300 rounded-xs inline-block"></span> 미지정
-        </span>
-        <span class="flex items-center gap-1.5 font-medium text-amber-700">
-          <span class="w-2.5 h-4 bg-amber-400 rounded-xs inline-block"></span> ⭐ 관심공고
-        </span>
-        <span class="flex items-center gap-1.5 font-medium text-blue-700">
-          <span class="w-2.5 h-4 bg-blue-500 rounded-xs inline-block"></span> 📝 지원완료
-        </span>
-        <span class="flex items-center gap-1.5 font-medium text-red-600">
-          <span class="w-3.5 h-3.5 border-2 border-red-500 rounded-xs inline-block"></span> 마감임박
-        </span>
+      <div class="grid grid-cols-2 bg-slate-100 p-1 rounded-xl text-xs font-bold mb-4">
+        <button id="auth-tab-login" onclick="switchAuthTab('login')" class="py-2 rounded-lg bg-white text-blue-600 shadow-xs transition">로그인</button>
+        <button id="auth-tab-register" onclick="switchAuthTab('register')" class="py-2 rounded-lg text-slate-600 hover:text-slate-900 transition">초대코드로 가입 신청</button>
       </div>
-    </div>
 
-    <!-- 2단 그리드 레이아웃 (좌: 퍼즐 직소맵 / 우: 탭 및 공고 리스트) -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      
-      <!-- 좌측: 수도권 공고 현황 직소맵 섹션 -->
-      <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs h-fit">
-        <div class="flex items-center justify-between mb-4">
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">아이디 (대소문자 무관)</label>
+          <input type="text" id="login-username" required placeholder="아이디를 입력하세요" class="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">비밀번호 (대소문자 무관)</label>
+          <input type="password" id="login-password" required placeholder="비밀번호를 입력하세요" class="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+        <div id="login-error-msg" class="hidden p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-medium"></div>
+        <button type="submit" class="w-full py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-500/20 transition">
+          지도 잠금 해제 및 로그인
+        </button>
+      </form>
+
+      <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-3 hidden">
+        <div>
+          <label class="block text-xs font-bold text-indigo-700 mb-1"><i class="fa-solid fa-ticket mr-1"></i>전달받은 초대코드 *</label>
+          <input type="text" id="reg-invite-code" required placeholder="예: GH-7X9K" class="w-full px-3.5 py-2 text-xs font-mono uppercase bg-indigo-50/50 border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
           <div>
-            <h2 id="map-section-title" class="text-base font-bold text-slate-900">수도권 공고 현황</h2>
-            <p class="text-xs text-slate-500 mt-0.5">거점 블록을 클릭하면 해당 지역 공고만 모아봅니다.</p>
+            <label class="block text-xs font-bold text-slate-700 mb-1">사용할 아이디 *</label>
+            <input type="text" id="reg-username" required placeholder="영문/숫자" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
           </div>
-          <span id="selected-region-badge" class="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold">
-            전체 지역
-          </span>
-        </div>
-
-        <!-- 퍼즐 맵 노드 그리드 -->
-        <div id="map-container" class="grid grid-cols-3 gap-2.5 select-none">
-          <!-- JS 렌더링 -->
-        </div>
-      </div>
-
-      <!-- 우측: 탭 네비게이션 및 공고 리스트 -->
-      <div class="lg:col-span-7 flex flex-col">
-        
-        <!-- 탭 바: 현재 채용 -> 상시공고 -> 역대채용 아카이브 순서 -->
-        <div class="bg-white rounded-t-2xl border-t border-x border-slate-200 px-4 pt-3 flex items-center justify-between flex-wrap gap-2">
-          <div class="flex space-x-1 overflow-x-auto">
-            <button onclick="switchTab('active')" id="tab-active" class="tab-btn px-4 py-2.5 font-bold text-sm border-b-2 border-blue-600 text-blue-600 whitespace-nowrap flex items-center gap-1.5">
-              <span>현재 채용</span>
-              <span id="count-active" class="px-1.5 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700">0</span>
-            </button>
-            <button onclick="switchTab('alwaysOn')" id="tab-alwaysOn" class="tab-btn px-4 py-2.5 font-bold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 whitespace-nowrap flex items-center gap-1.5">
-              <span>상시공고</span>
-              <span id="count-alwaysOn" class="px-1.5 py-0.5 text-xs rounded-full bg-slate-100 text-slate-600">0</span>
-            </button>
-            <button onclick="switchTab('archive')" id="tab-archive" class="tab-btn px-4 py-2.5 font-bold text-sm border-b-2 border-transparent text-slate-500 hover:text-slate-800 whitespace-nowrap flex items-center gap-1.5">
-              <span>역대채용 아카이브</span>
-              <span id="count-archive" class="px-1.5 py-0.5 text-xs rounded-full bg-slate-100 text-slate-600">0</span>
-            </button>
-          </div>
-
-          <!-- 상태별 필터 -->
-          <div class="pb-2">
-            <select id="status-filter" onchange="renderAll()" class="text-xs border border-slate-200 rounded-xl px-3 py-1.5 text-slate-600 bg-slate-50 focus:outline-none focus:border-blue-500">
-              <option value="all">모든 상태 보기</option>
-              <option value="interested">⭐ 관심공고만</option>
-              <option value="applied">📝 지원완료만</option>
-              <option value="none">미지정만</option>
-            </select>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">닉네임 *</label>
+            <input type="text" id="reg-nickname" required placeholder="공고 등록 시 표시" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
           </div>
         </div>
-
-        <!-- 공고 카드 리스트 영역 -->
-        <div class="bg-white rounded-b-2xl border border-slate-200 p-4 shadow-xs min-h-[500px]">
-          <div id="job-list-container" class="space-y-3">
-            <!-- JS 렌더링 -->
-          </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">비밀번호 *</label>
+          <input type="password" id="reg-password" required placeholder="비밀번호 설정" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
         </div>
-
-      </div>
+        <div id="reg-status-msg" class="hidden p-2.5 rounded-lg text-xs font-medium"></div>
+        <button type="submit" class="w-full py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-500/20 transition">
+          가입 신청하기 (관리자 승인 후 활성화)
+        </button>
+      </form>
     </div>
+  </div>
+
+  <main id="main-content" class="locked-blur max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-500 font-medium">누적 아카이브 기업</p>
+          <p id="stat-companies" class="text-2xl font-bold text-slate-900 mt-1">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+          <i class="fa-solid fa-building"></i>
+        </div>
+      </div>
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-500 font-medium">현재 채용 진행 중</p>
+          <p id="stat-active-jobs" class="text-2xl font-bold text-blue-600 mt-1">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+          <i class="fa-solid fa-fire"></i>
+        </div>
+      </div>
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-500 font-medium">내 지원 완료 / 전형 중</p>
+          <p id="stat-applied" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <i class="fa-solid fa-paper-plane"></i>
+        </div>
+      </div>
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-500 font-medium">마감 보존 공고</p>
+          <p id="stat-archived" class="text-2xl font-bold text-slate-600 mt-1">0</p>
+        </div>
+        <div class="w-10 h-10 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
+          <i class="fa-solid fa-box-archive"></i>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden p-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+            <span>수도권 거점 직소 퍼즐 맵</span>
+            <span id="current-filter-badge" class="text-xs bg-slate-100 text-slate-700 font-medium px-2.5 py-0.5 rounded-full">전체 구역</span>
+          </h2>
+          <p class="text-xs text-slate-500 mt-0.5">퍼즐 조각을 클릭하면 해당 권역 기업과 공고가 필터링됩니다.</p>
+        </div>
+
+        <div class="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+          <button id="view-tab-capital" onclick="switchMapView('capital')" class="px-3 py-1.5 rounded-lg bg-white text-blue-600 shadow-xs transition">수도권 퍼즐 뷰</button>
+          <button id="view-tab-national" onclick="switchMapView('national')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">전국 광역권</button>
+        </div>
+      </div>
+
+      <div class="relative w-full h-[460px] sm:h-[540px] bg-gradient-to-b from-slate-50 to-slate-100/70 rounded-xl my-4 overflow-hidden border border-slate-200 flex items-center justify-center">
+        <svg id="svg-capital-view" viewBox="-30 -20 1000 620" class="w-full h-full select-none">
+          <defs>
+            <linearGradient id="hanRiverGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#38bdf8" />
+              <stop offset="50%" stop-color="#0284c7" />
+              <stop offset="100%" stop-color="#0369a1" />
+            </linearGradient>
+          </defs>
+          <path class="river-flow" d="M 140,175 C 240,142 320,142 440,165 C 560,188 650,175 860,128" fill="none" stroke-width="18" />
+          <path d="M 145,175 C 242,142 320,142 440,165 C 560,188 650,175 855,128" fill="none" stroke="#bae6fd" stroke-width="3.5" opacity="0.85" />
+
+          <g class="region-group" id="grp-seoul-gb" onclick="filterByRegion('서울 강북권')">
+            <path class="puzzle-piece" d="M 334,25 L 646,25 Q 670,25 670,49 L 670,130 Q 670,152 646,154 C 570,164 510,160 440,147 C 385,137 355,134 334,134 Q 310,134 310,110 L 310,49 Q 310,25 334,25 Z" />
+            <text x="490" y="82" class="map-label-main" style="font-size: 15px;">강북권</text>
+            <text x="490" y="102" class="map-label-sub">(마포·용산·중구·종로·성동·광진 등)</text>
+            <g class="region-badge" id="badge-seoul-gb" transform="translate(615, 65)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="11" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g class="region-group" id="grp-incheon" onclick="filterByRegion('인천광역시')">
+            <path class="puzzle-piece" d="M 64,195 L 186,195 Q 210,195 210,219 L 210,235 C 210,243 234,235 234,250 C 234,265 210,257 210,265 L 210,365 C 210,373 186,365 186,380 C 186,395 210,387 210,395 L 210,416 Q 210,440 186,440 L 64,440 Q 40,440 40,416 L 40,219 Q 40,195 64,195 Z" />
+            <text x="125" y="320" class="map-label-main" style="font-size: 14.5px;">인천광역시</text>
+            <g class="region-badge" id="badge-incheon" transform="translate(175, 298)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="11" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g class="region-group" id="grp-seoul-sw1" onclick="filterByRegion('서울 서남부권')">
+            <path class="puzzle-piece" d="M 210,219 Q 210,182 235,176 C 285,165 340,168 395,178 L 395,225 C 395,233 419,225 419,240 C 419,255 395,247 395,255 L 395,310 L 317,310 C 309,310 317,334 302,334 C 287,334 295,310 287,310 L 210,310 L 210,265 C 210,257 234,265 234,250 C 234,235 210,243 210,235 L 210,219 Z" />
+            <text x="302" y="238" class="map-label-main">서울 서남부권</text>
+            <text x="302" y="255" class="map-label-sub">(강서·양천·영등포·동작)</text>
+            <g class="region-badge" id="badge-seoul-sw1" transform="translate(368, 215)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="11" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g class="region-group" id="grp-seoul-sw2" onclick="filterByRegion('서울 남부권')">
+            <path class="puzzle-piece" d="M 395,178 C 455,188 520,198 580,192 L 580,225 C 580,233 604,225 604,240 C 604,255 580,247 580,255 L 580,310 L 502,310 C 494,310 502,286 487,286 C 472,286 480,310 472,310 L 395,310 L 395,255 C 395,247 419,255 419,240 C 419,225 395,233 395,225 L 395,178 Z" />
+            <text x="487" y="238" class="map-label-main">서울 남부권</text>
+            <text x="487" y="255" class="map-label-sub">(구로·금천·관악)</text>
+            <g class="region-badge" id="badge-seoul-sw2" transform="translate(552, 215)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="11" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g class="region-group" id="grp-seoul-gn" onclick="filterByRegion('서울 강남권')">
+            <path class="puzzle-piece" d="M 580,192 C 640,185 705,172 765,158 L 765,225 C 765,233 789,225 789,240 C 789,255 765,247 765,255 L 765,310 L 687,310 C 679,310 687,334 672,334 C 657,334 665,310 657,310 L 580,310 L 580,255 C 580,247 604,255 604,240 C 604,225 580,233 580,225 L 580,192 Z" />
+            <text x="672" y="238" class="map-label-main">서울 강남권</text>
+            <text x="672" y="255" class="map-label-sub">(서초·강남·송파)</text>
+            <g class="region-badge" id="badge-seoul-gn" transform="translate(738, 215)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="11" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g class="region-group" id="grp-gyeonggi-s1" onclick="filterByRegion('경기 남부 1구역')">
+            <path class="puzzle-piece" d="M 210,310 L 287,310 C 295,310 287,334 302,334 C 317,334 309,310 317,310 L 395,310 L 395,360 C 395,368 419,360 419,375 C 419,390 395,382 395,390 L 395,440 L 234,440 Q 210,440 210,416 L 210,395 C 210,387 186,395 186,380 C 186,365 210,373 210,365 L 210,310 Z" />
+            <text x="302" y="375" class="map-label-main">경기 남부 1구역</text>
+            <text x="302" y="392" class="map-label-sub">(부천·시흥·광명)</text>
+            <g class="region-badge" id="badge-gyeonggi-s1" transform="translate(368, 355)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="11" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g class="region-group" id="grp-gyeonggi-s2" onclick="filterByRegion('경기 남부 2구역')">
+            <path class="puzzle-piece" d="M 395,310 L 472,310 C 480,310 472,286 487,286 C 502,286 494,310 502,310 L 580,310 L 580,360 C 580,368 604,360 604,375 C 604,390 580,382 580,390 L 580,440 L 502,440 C 494,440 502,464 487,464 C 472,464 480,440 472,440 L 395,440 L 395,390 C 395,382 419,390 419,375 C 419,360 395,368 395,360 L 395,310 Z" />
+            <text x="487" y="375" class="map-label-main">경기 남부 2구역</text>
+            <text x="487" y="392" class="map-label-sub">(안양·과천·군포·의왕)</text>
+            <g class="region-badge" id="badge-gyeonggi-s2" transform="translate(552, 355)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="11" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g class="region-group" id="grp-gyeonggi-s3" onclick="filterByRegion('경기 남부 3구역')">
+            <path class="puzzle-piece" d="M 580,310 L 657,310 C 665,310 657,334 672,334 C 687,334 679,310 687,310 L 765,310 L 765,255 C 765,247 789,255 789,240 C 789,225 765,233 765,225 L 765,158 C 805,149 840,142 868,138 Q 895,134 895,162 L 895,416 Q 895,440 871,440 L 780,440 C 772,440 780,416 765,416 C 750,416 758,440 750,440 L 580,440 L 580,390 C 580,382 604,390 604,375 C 604,360 580,368 580,360 L 580,310 Z" />
+            <text x="735" y="375" class="map-label-main">경기 남부 3구역</text>
+            <text x="735" y="392" class="map-label-sub">(성남·용인·하남)</text>
+            <g class="region-badge" id="badge-gyeonggi-s3" transform="translate(835, 290)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="11" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g class="region-group" id="grp-suwon" onclick="filterByRegion('수원시')">
+            <path class="puzzle-piece" d="M 395,440 L 472,440 C 480,440 472,464 487,464 C 502,464 494,440 502,440 L 580,440 L 580,490 C 580,498 604,490 604,505 C 604,520 580,512 580,520 L 580,565 L 419,565 Q 395,565 395,541 L 395,440 Z" />
+            <text x="487" y="512" class="map-label-main" style="font-size: 15px;">수원시</text>
+            <g class="region-badge" id="badge-suwon" transform="translate(545, 495)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="11" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g class="region-group" id="grp-dongtan" onclick="filterByRegion('화성시(동탄)')">
+            <path class="puzzle-piece" d="M 580,440 L 750,440 C 758,440 750,416 765,416 C 780,416 772,440 780,440 L 800,440 L 800,541 Q 800,565 776,565 L 580,565 L 580,520 C 580,512 604,520 604,505 C 604,490 580,498 580,490 L 580,440 Z" />
+            <text x="692" y="502" class="map-label-main">동탄</text>
+            <text x="692" y="519" class="map-label-sub">(화성시)</text>
+            <g class="region-badge" id="badge-dongtan" transform="translate(755, 488)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="11" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g transform="translate(885, 20)">
+            <circle cx="15" cy="15" r="13" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+            <polygon points="15,5 19,19 15,16 11,19" fill="#0284c7" />
+            <text x="15" y="38" font-size="11" font-weight="900" fill="#0f172a" text-anchor="middle">N</text>
+          </g>
+        </svg>
+
+        <svg id="svg-national-view" viewBox="0 0 960 540" class="w-full h-full select-none hidden">
+          <g class="region-group" id="grp-nat-수도권" onclick="filterByRegion('수도권 전체')">
+            <path class="puzzle-piece" d="M 168,35 L 480,35 L 480,95 C 480,104 506,95 506,112 C 506,129 480,120 480,129 L 480,190 L 327,190 C 318,190 327,216 310,216 C 293,216 302,190 293,190 L 140,190 L 140,63 Q 140,35 168,35 Z" />
+            <text x="310" y="105" class="map-label-main" style="font-size: 16px;">수도권</text>
+            <text x="310" y="128" class="map-label-sub" style="font-size: 12px;">(서울/경기/인천)</text>
+            <g class="region-badge" id="badge-nat-수도권" transform="translate(420, 80)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g class="region-group" id="grp-nat-강원권" onclick="filterByRegion('강원권')">
+            <path class="puzzle-piece" d="M 480,35 L 792,35 Q 820,35 820,63 L 820,190 L 667,190 C 658,190 667,216 650,216 C 633,216 642,190 633,190 L 480,190 L 480,129 C 480,120 506,129 506,112 C 506,95 480,104 480,95 L 480,35 Z" />
+            <text x="650" y="105" class="map-label-main" style="font-size: 16px;">강원권</text>
+            <text x="650" y="128" class="map-label-sub" style="font-size: 12px;">(원주/춘천)</text>
+            <g class="region-badge" id="badge-nat-강원권" transform="translate(760, 80)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g class="region-group" id="grp-nat-대전충청" onclick="filterByRegion('대전/충청권')">
+            <path class="puzzle-piece" d="M 140,190 L 293,190 C 302,190 293,216 310,216 C 327,216 318,190 327,190 L 480,190 L 480,250 C 480,259 506,250 506,267 C 506,284 480,275 480,284 L 480,345 L 327,345 C 318,345 327,371 310,371 C 293,371 302,345 293,345 L 140,345 L 140,190 Z" />
+            <text x="310" y="262" class="map-label-main" style="font-size: 16px;">대전·충청</text>
+            <text x="310" y="285" class="map-label-sub" style="font-size: 12px;">(오송/대덕)</text>
+            <g class="region-badge" id="badge-nat-대전충청" transform="translate(420, 240)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g class="region-group" id="grp-nat-전라권" onclick="filterByRegion('전라권')">
+            <path class="puzzle-piece" d="M 140,345 L 293,345 C 302,345 293,371 310,371 C 327,371 318,345 327,345 L 480,345 L 480,405 C 480,414 454,405 454,422 C 454,439 480,430 480,439 L 480,500 L 168,500 Q 140,500 140,472 L 140,345 Z" />
+            <text x="310" y="418" class="map-label-main" style="font-size: 16px;">전라권</text>
+            <text x="310" y="441" class="map-label-sub" style="font-size: 12px;">(광주/전주/나주)</text>
+            <g class="region-badge" id="badge-nat-전라권" transform="translate(420, 395)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g class="region-group" id="grp-nat-경상권" onclick="filterByRegion('경상권')">
+            <path class="puzzle-piece" d="M 480,190 L 633,190 C 642,190 633,216 650,216 C 667,216 658,190 667,190 L 820,190 L 820,472 Q 820,500 792,500 L 480,500 L 480,439 C 480,430 454,439 454,422 C 454,405 480,414 480,405 L 480,345 L 480,284 C 480,275 506,284 506,267 C 506,250 480,259 480,250 L 480,190 Z" />
+            <text x="650" y="335" class="map-label-main" style="font-size: 16px;">경상권</text>
+            <text x="650" y="358" class="map-label-sub" style="font-size: 12px;">(대구/부산/포항)</text>
+            <g class="region-badge" id="badge-nat-경상권" transform="translate(760, 315)" style="display: none;"><circle class="badge-circle" cx="0" cy="0" r="12" /><text class="badge-text" x="0" y="0">0</text></g>
+          </g>
+
+          <g transform="translate(885, 25)">
+            <circle cx="15" cy="15" r="13" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+            <polygon points="15,5 19,19 15,16 11,19" fill="#0284c7" />
+            <text x="15" y="38" font-size="11" font-weight="900" fill="#0f172a" text-anchor="middle">N</text>
+          </g>
+        </svg>
+
+        <button id="reset-filter-btn" onclick="filterByRegion(null)" class="hidden absolute top-3 right-3 bg-white/95 backdrop-blur-xs px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-blue-600 rounded-lg shadow-sm border border-slate-200 transition">
+          <i class="fa-solid fa-arrow-rotate-left mr-1"></i> 전체 구역 보기
+        </button>
+      </div>
+
+      <div class="flex items-center space-x-1.5 overflow-x-auto pb-1 text-xs scrollbar-none" id="quick-region-chips"></div>
+    </section>
+
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-3 relative">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-slate-100">
+        <div class="flex items-center space-x-2">
+          <div class="w-2 h-4 bg-indigo-600 rounded-full"></div>
+          <h3 class="text-sm font-bold text-slate-900">
+            <span id="archive-region-title">선택 권역</span> 역대 채용 등록 기업 풀 (Company Pool)
+          </h3>
+          <span id="archive-company-count" class="text-xs bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full">0개사</span>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]"></i>
+            <input type="text" id="companyPoolSearchInput" oninput="renderCompanyPool()" placeholder="기업 풀 내 회사 검색..." class="pl-8 pr-3 py-1.5 text-xs bg-slate-50 hover:bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 w-44 sm:w-56 transition placeholder:text-slate-400">
+          </div>
+          <span class="hidden md:inline text-[11px] text-slate-400">상태 태그(✔, ✖, ■)는 내 계정에만 개별 저장됩니다</span>
+        </div>
+      </div>
+
+      <div id="company-pool-container" class="flex flex-wrap gap-2 pt-1 relative"></div>
+    </section>
+
+    <section class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div class="flex items-center space-x-3">
+          <div class="flex items-center bg-slate-100 p-1 rounded-lg text-xs font-semibold">
+            <button id="tab-active-only" onclick="setArchiveTab('active')" class="px-3 py-1.5 rounded-md bg-white text-blue-600 shadow-xs transition">
+              <i class="fa-solid fa-bolt mr-1 text-amber-500"></i> 현재 채용 중인 공고 (마감임박순)
+            </button>
+            <button id="tab-all-archive" onclick="setArchiveTab('all')" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition">
+              <i class="fa-solid fa-arrow-down-a-z mr-1"></i> 역대 전체 아카이브 (회사명 가나다순)
+            </button>
+          </div>
+          <span id="list-count" class="text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-1 rounded-full">0건</span>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <input type="text" id="searchInput" oninput="renderPostings()" placeholder="회사명, 직무 검색..." class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-48">
+          <select id="statusFilter" onchange="renderPostings()" class="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none">
+            <option value="ALL">내 전체 전형 상태</option>
+            <option value="관심">관심 공고</option>
+            <option value="서류작성중">서류 작성 중</option>
+            <option value="지원완료">지원 완료</option>
+            <option value="1차면접">면접 전형</option>
+            <option value="최종합격">최종 합격</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="posting-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
   </main>
 
-  <!-- ================= 모달 1: 공고 등록 (기본값: 선택 안 함) ================= -->
-  <div id="job-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4 backdrop-blur-xs">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-base font-bold text-slate-900">새 채용 공고 등록</h3>
-        <button onclick="closeJobModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+  <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div>
+          <h3 id="modal-title" class="text-base font-bold text-slate-900">새 채용 공고 등록</h3>
+          <p class="text-[11px] text-slate-400 mt-0.5">공고 정보는 전체 멤버에게 공유됩니다.</p>
+        </div>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
-      <form id="job-form" onsubmit="handleJobSubmit(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1">기업명 *</label>
-          <input type="text" id="job-company" required placeholder="예: 미토퀘스트, 삼성바이오로직스" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
-        </div>
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1">공고명 (직무) *</label>
-          <input type="text" id="job-title" required placeholder="예: 펩타이드 신약 개발 연구원" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
-        </div>
-        <div class="grid grid-cols-2 gap-3">
+
+      <form id="jobForm" onsubmit="saveJobPosting(event)" class="mt-4 space-y-4">
+        <input type="hidden" id="form-edit-id" value="">
+
+        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-3">
           <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">거점 지역 *</label>
-            <select id="job-region" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
-              <option value="수원/광교">수원/광교</option>
-              <option value="판교/분당">판교/분당</option>
-              <option value="서울 강남/서초">서울 강남/서초</option>
-              <option value="서울 마곡/강서">서울 마곡/강서</option>
-              <option value="서울 종로/중구">서울 종로/중구</option>
-              <option value="인천 송도">인천 송도</option>
-              <option value="용인/기흥">용인/기흥</option>
-              <option value="화성/동탄">화성/동탄</option>
-              <option value="대전/오송">대전/오송</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">채용 유형</label>
-            <div class="flex items-center h-10">
-              <label class="inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="job-always-on" onchange="toggleDeadlineInput()" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 mr-2 w-4 h-4">
-                <span class="text-sm text-slate-700 font-semibold">상시공고</span>
-              </label>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">회사명 *</label>
+            <input type="text" id="form-company" required oninput="checkCompanyHistory()" placeholder="예: 한미약품, 유한양행" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <div id="history-detect-banner" class="hidden mt-1.5 p-2.5 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-700 flex items-start space-x-1.5">
+              <i class="fa-solid fa-circle-info mt-0.5 text-indigo-500"></i>
+              <span id="history-detect-text"></span>
             </div>
           </div>
-        </div>
-        <div id="deadline-input-wrapper">
-          <label class="block text-xs font-bold text-slate-600 mb-1">마감 기한</label>
-          <input type="date" id="job-deadline" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500">
-        </div>
-        
-        <!-- 기본값: 선택 안 함 (none) -->
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1.5">관심 / 지원 상태 (기본: 선택 안 함)</label>
-          <div class="grid grid-cols-3 gap-2">
-            <label class="flex items-center justify-center p-2.5 border border-slate-200 bg-slate-50/50 rounded-xl cursor-pointer hover:bg-slate-100">
-              <input type="radio" name="jobStatus" value="none" checked class="mr-1.5 text-slate-600">
-              <span class="text-xs font-bold text-slate-700">선택 안 함</span>
-            </label>
-            <label class="flex items-center justify-center p-2.5 border border-amber-200 bg-amber-50/40 rounded-xl cursor-pointer hover:bg-amber-50">
-              <input type="radio" name="jobStatus" value="interested" class="mr-1.5 text-amber-500">
-              <span class="text-xs font-bold text-amber-800">⭐ 관심공고</span>
-            </label>
-            <label class="flex items-center justify-center p-2.5 border border-blue-200 bg-blue-50/40 rounded-xl cursor-pointer hover:bg-blue-50">
-              <input type="radio" name="jobStatus" value="applied" class="mr-1.5 text-blue-600">
-              <span class="text-xs font-bold text-blue-800">📝 지원완료</span>
-            </label>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">채용 포지션 / 공고 제목 *</label>
+            <input type="text" id="form-title" required placeholder="예: In vitro 효능 평가 연구원" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">근무 권역 *</label>
+              <select id="form-region" required onchange="handleManualRegionChange()" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+                <optgroup label="수원 & 경기 남부 권역">
+                  <option value="수원시">수원시</option>
+                  <option value="화성시(동탄)">화성시(동탄)</option>
+                  <option value="경기 남부 3구역">경기 남부 3구역 (성남·용인·하남)</option>
+                  <option value="경기 남부 2구역">경기 남부 2구역 (안양·과천·군포·의왕)</option>
+                  <option value="경기 남부 1구역">경기 남부 1구역 (부천·시흥·광명)</option>
+                  <option value="인천광역시">인천광역시</option>
+                </optgroup>
+                <optgroup label="서울 권역 (4개)">
+                  <option value="서울 강남권">서울 강남권 (서초·강남·송파)</option>
+                  <option value="서울 서남부권">서울 서남부권 (강서·양천·영등포·동작)</option>
+                  <option value="서울 남부권">서울 남부권 (구로·금천·관악)</option>
+                  <option value="서울 강북권">서울 강북권 (마포·용산·종로·중구·성동 등)</option>
+                </optgroup>
+                <optgroup label="기타 전국 광역권">
+                  <option value="수도권 전체">수도권 기타/전체</option>
+                  <option value="대전/충청권">대전/충청권 (오송/대덕)</option>
+                  <option value="경상권">경상권 (대구/부산/포항 등)</option>
+                  <option value="전라권">전라권</option>
+                  <option value="강원권">강원권</option>
+                </optgroup>
+              </select>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-xs font-semibold text-slate-700">마감일 *</label>
+                <label class="flex items-center space-x-1 cursor-pointer select-none">
+                  <input type="checkbox" id="form-always-open" onchange="toggleAlwaysOpen()" class="w-3.5 h-3.5 rounded text-orange-600 focus:ring-orange-500">
+                  <span class="text-[11px] font-bold text-orange-600">채용 시 마감 (상시)</span>
+                </label>
+              </div>
+              <input type="date" id="form-deadline" required class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">공고 링크 (URL)</label>
+            <input type="url" id="form-url" placeholder="https://..." class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
           </div>
         </div>
 
-        <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1">메모</label>
-          <textarea id="job-memo" rows="2" placeholder="자격요건, 우대사항 등" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500"></textarea>
+        <div class="p-3.5 bg-indigo-50/50 rounded-xl border border-indigo-100 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-extrabold text-indigo-800 flex items-center gap-1">
+              <i class="fa-solid fa-user-shield text-indigo-600"></i> 내 개인 설정 (나에게만 보임)
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">내 전형 상태</label>
+              <select id="form-status" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <option value="관심">⭐ 관심 공고</option>
+                <option value="서류작성중">✍️ 서류 작성 중</option>
+                <option value="지원완료">📩 지원 완료</option>
+                <option value="1차면접">💬 면접 전형</option>
+                <option value="최종합격">🎉 최종 합격</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">내 지원 제출일</label>
+              <input type="date" id="form-applied-date" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">내 비밀 메모 (타인 열람 불가)</label>
+            <textarea id="form-memo" rows="2" placeholder="자소서 v2 제출, 희망연봉 등" class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+          </div>
         </div>
 
-        <div class="flex justify-end space-x-2 pt-2">
-          <button type="button" onclick="closeJobModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100">취소</button>
-          <button type="submit" class="px-4 py-2.5 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-sm">등록하기</button>
+        <div class="flex items-center justify-between pt-3 border-t border-slate-100">
+          <div>
+            <button type="button" id="form-close-job-btn" onclick="archiveCurrentJobFromModal()" class="hidden px-3 py-2 text-xs font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-lg transition flex items-center space-x-1">
+              <i class="fa-solid fa-box-archive text-[11px]"></i>
+              <span>공고 마감 처리</span>
+            </button>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button type="button" onclick="closeModal()" class="px-4 py-2 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">취소</button>
+            <button type="submit" id="form-submit-btn" class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition">저장하기</button>
+          </div>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- ================= 모달 2: 정보수정 (비밀번호 변경) ================= -->
-  <div id="profile-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4 backdrop-blur-xs">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-base font-bold text-slate-900">회원 정보 수정</h3>
-        <button onclick="closeProfileModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
-      </div>
-      
-      <div class="space-y-4">
-        <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-sm">
-          <div class="flex justify-between py-1">
-            <span class="text-slate-500 font-medium">아이디</span>
-            <span class="font-bold text-slate-800">researcher_jg</span>
+  <div id="admin-modal-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto space-y-6">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center">
+            <i class="fa-solid fa-crown"></i>
           </div>
-          <div class="flex justify-between py-1">
-            <span class="text-slate-500 font-medium">닉네임</span>
-            <span class="font-bold text-slate-800">정구현</span>
+          <div>
+            <h3 class="text-base font-extrabold text-slate-900">관리자 멤버십 & 계정 설정</h3>
+            <p class="text-[11px] text-slate-500">회원 정보를 수정하거나 초대코드를 관리합니다.</p>
           </div>
         </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="changeMyAdminAccount()" class="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 transition">관리자 계정 변경</button>
+          <button onclick="closeAdminModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+      </div>
 
-        <div class="border-t border-slate-200 pt-4">
-          <h4 class="text-sm font-bold text-slate-800 mb-3">비밀번호 변경</h4>
-          <form onsubmit="handleUserPasswordChange(event)" class="space-y-3">
-            <div>
-              <label class="block text-xs font-bold text-slate-600 mb-1">현재 비밀번호</label>
-              <input type="password" id="current-pw" required placeholder="현재 비밀번호 입력" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-600 mb-1">새 비밀번호</label>
-              <input type="password" id="new-pw" required placeholder="새 비밀번호 입력" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-600 mb-1">새 비밀번호 확인</label>
-              <input type="password" id="new-pw-confirm" required placeholder="새 비밀번호 다시 입력" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm">
-            </div>
-            <div class="flex justify-end space-x-2 pt-2">
-              <button type="button" onclick="closeProfileModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100">닫기</button>
-              <button type="submit" class="px-4 py-2.5 rounded-xl text-sm font-bold bg-blue-600 text-white hover:bg-blue-700">변경 완료</button>
-            </div>
-          </form>
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+        <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+          <i class="fa-solid fa-ticket text-indigo-600"></i> 그룹별 초대코드 발급
+        </h4>
+        <form onsubmit="createInviteCode(event)" class="flex flex-col sm:flex-row gap-2">
+          <input type="text" id="admin-group-name" required placeholder="그룹명 입력 (예: 연구실, 스터디)" class="flex-1 px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <input type="text" id="admin-custom-code" placeholder="지정 코드 (비워두면 랜덤 생성)" class="sm:w-48 px-3 py-2 text-xs font-mono uppercase bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition shrink-0">
+            + 초대코드 생성
+          </button>
+        </form>
+        <div id="admin-invite-list" class="flex flex-wrap gap-2 pt-1"></div>
+      </div>
+
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <i class="fa-solid fa-users text-blue-600"></i> 전체 회원 목록 및 관리
+          </h4>
+          <span id="admin-user-count" class="text-xs font-bold text-slate-500">0명</span>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 border-b border-slate-200">
+                <th class="py-2.5 px-3 font-bold">권한/상태</th>
+                <th class="py-2.5 px-3 font-bold">닉네임 (아이디)</th>
+                <th class="py-2.5 px-3 font-bold">소속 그룹</th>
+                <th class="py-2.5 px-3 font-bold">가입일</th>
+                <th class="py-2.5 px-3 font-bold text-right">관리 액션</th>
+              </tr>
+            </thead>
+            <tbody id="admin-users-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ================= 모달 3: 관리자 회원 관리 (0000 초기화 전용) ================= -->
-  <div id="admin-modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4 backdrop-blur-xs">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
-      <div class="flex justify-between items-center mb-1">
-        <h3 class="text-base font-bold text-slate-900">관리자 - 회원 관리</h3>
-        <button onclick="closeAdminModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
-      </div>
-      <p class="text-xs text-slate-500 mb-4">
-        회원의 아이디, 닉네임 확인 및 <strong>비밀번호 0000 초기화</strong>만 가능합니다.
-      </p>
-
-      <div class="border border-slate-200 rounded-xl overflow-hidden">
-        <table class="w-full text-left border-collapse text-sm">
-          <thead>
-            <tr class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase">
-              <th class="py-3 px-4 font-bold">아이디</th>
-              <th class="py-3 px-4 font-bold">닉네임</th>
-              <th class="py-3 px-4 text-right font-bold">비밀번호 관리</th>
-            </tr>
-          </thead>
-          <tbody id="admin-user-tbody" class="divide-y divide-slate-200">
-            <!-- JS 렌더링 -->
-          </tbody>
-        </table>
-      </div>
-
-      <div class="flex justify-end mt-4">
-        <button onclick="closeAdminModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">닫기</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= 자바스크립트 로직 ================= -->
   <script>
-    const INITIAL_JOBS = [
-      {
-        id: 1,
-        companyName: '삼성바이오에피스',
-        title: '배양/정제 공정개발 및 분석 연구원 채용',
-        region: '인천 송도',
-        deadline: getOffsetDate(2),
-        isAlwaysOn: false,
-        status: 'none',
-        memo: 'HPLC, SPR 분석 경험 우대'
-      },
-      {
-        id: 2,
-        companyName: 'SK바이오팜',
-        title: '중추신경계 및 항암 신약 약리효능 평가',
-        region: '판교/분당',
-        deadline: getOffsetDate(10),
-        isAlwaysOn: false,
-        status: 'none',
-        memo: 'In vivo 동물모델 실험 설계 유경험자'
-      },
-      {
-        id: 3,
-        companyName: '한미약품 연구센터',
-        title: '펩타이드/바이오신약 제형 연구 상시 채용',
-        region: '화성/동탄',
-        deadline: '',
-        isAlwaysOn: true,
-        status: 'none',
-        memo: '가용화 제형 및 약물전달시스템(DDS)'
-      },
-      {
-        id: 4,
-        companyName: '유한양행 중앙연구소',
-        title: '섬유화 질환 타겟 신약 후보물질 발굴',
-        region: '수원/광교',
-        deadline: getOffsetDate(-4),
-        isAlwaysOn: false,
-        status: 'none',
-        memo: 'IPF 모델 및 TGF-b 신호전달 연구'
-      }
-    ];
-
-    const CAPITAL_REGIONS = [
-      '수원/광교', '판교/분당', '서울 강남/서초',
-      '서울 마곡/강서', '서울 종로/중구', '인천 송도',
-      '용인/기흥', '화성/동탄', '과천/안양'
-    ];
-
-    const NATIONAL_REGIONS = [
-      '대전/오송', '청주/충북', '춘천/강원',
-      '대구/경북', '부산/경남', '광주/전남'
-    ];
-
-    let allJobs = [];
-    let currentTab = 'active'; // 'active' | 'alwaysOn' | 'archive'
-    let currentRegionMode = 'capital'; // 'capital' | 'national'
+    let jobs = [];
+    let currentUser = null;
     let selectedRegion = null;
+    let selectedCompany = null;
+    let currentMapView = 'capital';
+    let currentArchiveTab = 'active';
+    let companyTags = {};
+    let activePopupCompany = null;
 
-    let users = [
-      { id: 'researcher_jg', nickname: '정구현', password: 'password123' },
-      { id: 'bio_kim', nickname: '김바이오', password: 'userpass99' }
+    const CAPITAL_DETAILED_REGIONS = [
+      '서울 강남권', '서울 서남부권', '서울 남부권', '서울 강북권',
+      '수원시', '화성시(동탄)', '경기 남부 1구역', '경기 남부 2구역', '경기 남부 3구역', '인천광역시', '수도권 전체'
     ];
 
-    function getOffsetDate(days) {
-      const d = new Date();
-      d.setDate(d.getDate() + days);
-      return d.toISOString().split('T')[0];
+    function isCapitalRegion(regionName) { return CAPITAL_DETAILED_REGIONS.includes(regionName); }
+
+    function normalizeRegion(name) {
+      if (!name) return '';
+      if (name === '서울 서남 1구역') return '서울 서남부권';
+      if (name === '서울 서남 2구역') return '서울 남부권';
+      return name;
     }
 
-    function getDeadlineInfo(deadlineStr, isAlwaysOn) {
-      if (isAlwaysOn) return { isExpired: false, isImminent: false, label: '상시채용' };
-      if (!deadlineStr) return { isExpired: false, isImminent: false, label: '기한미정' };
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const target = new Date(deadlineStr);
-      target.setHours(0, 0, 0, 0);
-
-      const diffDays = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
-
-      if (diffDays < 0) return { isExpired: true, isImminent: false, label: `마감 (${deadlineStr})` };
-      if (diffDays === 0) return { isExpired: false, isImminent: true, label: '오늘 마감' };
-      if (diffDays <= 3) return { isExpired: false, isImminent: true, label: `D-${diffDays} (${deadlineStr})` };
-      return { isExpired: false, isImminent: false, label: `D-${diffDays} (${deadlineStr})` };
+    function matchesRegionFilter(jobRegion, targetFilter) {
+      if (!targetFilter) return true;
+      const normalizedJob = normalizeRegion(jobRegion);
+      const normalizedTarget = normalizeRegion(targetFilter);
+      if (normalizedTarget === '수도권 전체') return isCapitalRegion(normalizedJob);
+      return normalizedJob === normalizedTarget;
     }
 
-    // 앱 초기화 및 기존 데이터 마이그레이션 (관심 표시 일괄 해제)
-    function initApp() {
-      const savedJobs = localStorage.getItem('my_job_map_data');
-      const isMigrated = localStorage.getItem('my_job_map_interest_cleared_v2');
-
-      if (savedJobs) {
-        allJobs = JSON.parse(savedJobs);
-      } else {
-        allJobs = INITIAL_JOBS;
-      }
-
-      // 기존 공고들의 관심(interested) 표시 일괄 해제 마이그레이션
-      if (!isMigrated) {
-        allJobs = allJobs.map(job => ({
-          ...job,
-          status: job.status === 'interested' ? 'none' : (job.status || 'none')
-        }));
-        saveJobsToStorage();
-        localStorage.setItem('my_job_map_interest_cleared_v2', 'true');
-      }
-
-      renderAll();
+    function initAuth() {
+      try {
+        const savedUser = localStorage.getItem('my_job_map_user');
+        if (savedUser) currentUser = JSON.parse(savedUser);
+      } catch (e) { currentUser = null; }
+      applyAuthUI();
+      loadJobsFromServer();
     }
 
-    function saveJobsToStorage() {
-      localStorage.setItem('my_job_map_data', JSON.stringify(allJobs));
+    function forceKickOut() {
+      currentUser = null;
+      jobs = [];
+      companyTags = {};
+      localStorage.removeItem('my_job_map_user');
+      localStorage.removeItem('my_jobs_data');
+      applyAuthUI();
+      refreshUI();
+      alert('계정이 탈퇴 처리되었거나 권한이 만료되어 자동 로그아웃되었습니다.');
     }
 
-    function renderAll() {
-      renderMapSection();
-      renderJobList();
-      updateTabCounts();
-    }
+    function applyAuthUI() {
+      const overlay = document.getElementById('auth-overlay');
+      const mainContent = document.getElementById('main-content');
+      const headerActions = document.getElementById('header-actions');
+      const profileBadge = document.getElementById('user-profile-badge');
+      const adminBtn = document.getElementById('admin-panel-btn');
+      const exportBtn = document.getElementById('export-btn');
+      const importLabel = document.getElementById('import-btn-label');
 
-    // 좌측 퍼즐 직소맵 렌더링
-    function renderMapSection() {
-      const titleEl = document.getElementById('map-section-title');
-      const container = document.getElementById('map-container');
-      const badgeEl = document.getElementById('selected-region-badge');
+      if (currentUser) {
+        overlay.classList.add('hidden');
+        mainContent.classList.remove('locked-blur');
+        headerActions.classList.remove('hidden');
 
-      titleEl.textContent = currentRegionMode === 'capital' ? '수도권 공고 현황' : '전국 공고 현황';
-      badgeEl.textContent = selectedRegion ? `${selectedRegion} 선택됨` : '전체 지역';
+        const roleIcon = currentUser.role === 'admin' ? '<i class="fa-solid fa-crown text-amber-500 mr-1"></i>' : '<i class="fa-solid fa-user text-blue-500 mr-1"></i>';
+        profileBadge.innerHTML = `${roleIcon}<span>${currentUser.nickname}</span><span class="text-[10px] text-slate-400 font-normal ml-1">(${currentUser.groupName || '멤버'})</span>`;
 
-      const regions = currentRegionMode === 'capital' ? CAPITAL_REGIONS : NATIONAL_REGIONS;
-
-      container.innerHTML = regions.map(region => {
-        const count = allJobs.filter(j => {
-          const info = getDeadlineInfo(j.deadline, j.isAlwaysOn);
-          return j.region === region && !info.isExpired;
-        }).length;
-
-        const isSelected = selectedRegion === region;
-        const activeClass = isSelected
-          ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-500/30'
-          : 'border-slate-200 bg-slate-50/70 hover:bg-slate-100';
-
-        return `
-          <div onclick="selectRegion('${region}')" class="puzzle-node border rounded-2xl p-3.5 flex flex-col justify-between h-24 ${activeClass}">
-            <span class="text-xs font-bold text-slate-700">${region}</span>
-            <div class="flex items-end justify-between mt-2">
-              <span class="text-[11px] text-slate-400 font-medium">진행 공고</span>
-              <span class="text-base font-extrabold ${count > 0 ? 'text-blue-600' : 'text-slate-400'}">${count}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    // 탭 카운트 갱신
-    function updateTabCounts() {
-      let activeCount = 0;
-      let alwaysOnCount = 0;
-      let archiveCount = 0;
-
-      allJobs.forEach(job => {
-        if (selectedRegion && job.region !== selectedRegion) return;
-        const info = getDeadlineInfo(job.deadline, job.isAlwaysOn);
-        if (job.isAlwaysOn) {
-          alwaysOnCount++;
-        } else if (info.isExpired) {
-          archiveCount++;
+        // 관리자일 때만 [관리자], [백업], [복원] 버튼을 모두 표시하고 일반 회원은 전부 숨김
+        if (currentUser.role === 'admin') {
+          adminBtn.classList.remove('hidden');
+          exportBtn.classList.remove('hidden');
+          importLabel.classList.remove('hidden');
+          checkPendingUsersCount();
         } else {
-          activeCount++;
+          adminBtn.classList.add('hidden');
+          exportBtn.classList.add('hidden');
+          importLabel.classList.add('hidden');
         }
-      });
-
-      document.getElementById('count-active').textContent = activeCount;
-      document.getElementById('count-alwaysOn').textContent = alwaysOnCount;
-      document.getElementById('count-archive').textContent = archiveCount;
-    }
-
-    // 공고 리스트 렌더링 (가독성 높은 좌측 컬러바 및 뱃지 적용)
-    function renderJobList() {
-      const container = document.getElementById('job-list-container');
-      const statusFilter = document.getElementById('status-filter').value;
-
-      const filtered = allJobs.filter(job => {
-        if (selectedRegion && job.region !== selectedRegion) return false;
-        if (statusFilter !== 'all' && (job.status || 'none') !== statusFilter) return false;
-
-        const info = getDeadlineInfo(job.deadline, job.isAlwaysOn);
-        if (currentTab === 'active') {
-          return !job.isAlwaysOn && !info.isExpired;
-        } else if (currentTab === 'alwaysOn') {
-          return job.isAlwaysOn;
-        } else if (currentTab === 'archive') {
-          return !job.isAlwaysOn && info.isExpired;
-        }
-        return true;
-      });
-
-      if (filtered.length === 0) {
-        container.innerHTML = `
-          <div class="py-20 text-center text-slate-400 text-sm font-medium">
-            조건에 일치하는 채용 공고가 없습니다.
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = filtered.map(job => {
-        const info = getDeadlineInfo(job.deadline, job.isAlwaysOn);
-
-        // 상태별 좌측 액센트 바 및 우측 필 뱃지
-        let statusBarClass = 'status-bar-none';
-        let statusBadgeHtml = '';
-
-        if (job.status === 'interested') {
-          statusBarClass = 'status-bar-interested';
-          statusBadgeHtml = `<span class="px-2.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 rounded-full">⭐ 관심공고</span>`;
-        } else if (job.status === 'applied') {
-          statusBarClass = 'status-bar-applied';
-          statusBadgeHtml = `<span class="px-2.5 py-0.5 text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300 rounded-full">📝 지원완료</span>`;
-        }
-
-        const imminentClass = (!job.isAlwaysOn && info.isImminent) ? 'deadline-imminent' : 'border border-slate-200';
-        const deadlineBadgeHtml = job.isAlwaysOn
-          ? `<span class="px-2.5 py-1 text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg">상시채용</span>`
-          : `<span class="px-2.5 py-1 text-xs font-bold ${info.isImminent ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-slate-100 text-slate-600'} rounded-lg">${info.label}</span>`;
-
-        return `
-          <div class="rounded-2xl p-4 transition hover:shadow-md bg-white ${imminentClass} ${statusBarClass}">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-              <div class="flex items-center flex-wrap gap-2">
-                <span class="text-xs font-bold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg">${job.region}</span>
-                <span class="text-sm font-extrabold text-slate-900">${job.companyName}</span>
-                ${statusBadgeHtml}
-              </div>
-              <div>${deadlineBadgeHtml}</div>
-            </div>
-
-            <h3 class="text-base font-bold text-slate-800 mb-1.5">${job.title}</h3>
-            ${job.memo ? `<p class="text-xs text-slate-500 mb-3 bg-slate-50 p-2.5 rounded-xl border border-slate-100">${job.memo}</p>` : ''}
-
-            <div class="flex items-center justify-between pt-2.5 border-t border-slate-100 mt-2">
-              <div class="flex items-center space-x-1.5">
-                <span class="text-[11px] font-bold text-slate-400 mr-1">상태:</span>
-                <button onclick="changeJobStatus(${job.id}, 'none')" class="px-2.5 py-1 rounded-lg text-xs font-bold ${(job.status||'none') === 'none' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
-                  없음
-                </button>
-                <button onclick="changeJobStatus(${job.id}, 'interested')" class="px-2.5 py-1 rounded-lg text-xs font-bold ${job.status === 'interested' ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'}">
-                  ⭐ 관심
-                </button>
-                <button onclick="changeJobStatus(${job.id}, 'applied')" class="px-2.5 py-1 rounded-lg text-xs font-bold ${job.status === 'applied' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}">
-                  📝 지원완료
-                </button>
-              </div>
-              <button onclick="deleteJob(${job.id})" class="text-xs font-medium text-slate-400 hover:text-red-500">삭제</button>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    // 탭 및 지역 전환 핸들러
-    function switchTab(tabName) {
-      currentTab = tabName;
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('border-blue-600', 'text-blue-600');
-        btn.classList.add('border-transparent', 'text-slate-500');
-      });
-      const activeBtn = document.getElementById(`tab-${tabName}`);
-      if (activeBtn) {
-        activeBtn.classList.remove('border-transparent', 'text-slate-500');
-        activeBtn.classList.add('border-blue-600', 'text-blue-600');
-      }
-      renderJobList();
-    }
-
-    function switchRegionMode(mode) {
-      currentRegionMode = mode;
-      selectedRegion = null;
-      const capBtn = document.getElementById('region-btn-capital');
-      const natBtn = document.getElementById('region-btn-national');
-
-      if (mode === 'capital') {
-        capBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold bg-blue-600 text-white transition shadow-xs';
-        natBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition';
       } else {
-        natBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold bg-blue-600 text-white transition';
-        capBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition';
+        overlay.classList.remove('hidden');
+        mainContent.classList.add('locked-blur');
+        headerActions.classList.add('hidden');
       }
-      renderAll();
     }
 
-    function selectRegion(region) {
-      selectedRegion = (selectedRegion === region) ? null : region;
-      renderAll();
+    function switchAuthTab(tab) {
+      const loginForm = document.getElementById('loginForm');
+      const regForm = document.getElementById('registerForm');
+      const tabLogin = document.getElementById('auth-tab-login');
+      const tabReg = document.getElementById('auth-tab-register');
+
+      if (tab === 'login') {
+        loginForm.classList.remove('hidden'); regForm.classList.add('hidden');
+        tabLogin.className = "py-2 rounded-lg bg-white text-blue-600 shadow-xs transition";
+        tabReg.className = "py-2 rounded-lg text-slate-600 hover:text-slate-900 transition";
+      } else {
+        loginForm.classList.add('hidden'); regForm.classList.remove('hidden');
+        tabReg.className = "py-2 rounded-lg bg-white text-indigo-600 shadow-xs transition";
+        tabLogin.className = "py-2 rounded-lg text-slate-600 hover:text-slate-900 transition";
+      }
     }
 
-    function resetRegionFilter() {
-      selectedRegion = null;
-      renderAll();
-    }
-
-    function changeJobStatus(jobId, newStatus) {
-      allJobs = allJobs.map(job => job.id === jobId ? { ...job, status: newStatus } : job);
-      saveJobsToStorage();
-      renderAll();
-    }
-
-    function deleteJob(jobId) {
-      if (!confirm('해당 공고를 삭제하시겠습니까?')) return;
-      allJobs = allJobs.filter(job => job.id !== jobId);
-      saveJobsToStorage();
-      renderAll();
-    }
-
-    // 공고 등록 모달
-    function openJobModal() {
-      document.getElementById('job-form').reset();
-      document.querySelector('input[name="jobStatus"][value="none"]').checked = true;
-      toggleDeadlineInput();
-      document.getElementById('job-modal').classList.remove('hidden');
-      document.getElementById('job-modal').classList.add('flex');
-    }
-
-    function closeJobModal() {
-      document.getElementById('job-modal').classList.add('hidden');
-      document.getElementById('job-modal').classList.remove('flex');
-    }
-
-    function toggleDeadlineInput() {
-      const isAlwaysOn = document.getElementById('job-always-on').checked;
-      document.getElementById('deadline-input-wrapper').style.display = isAlwaysOn ? 'none' : 'block';
-    }
-
-    function handleJobSubmit(e) {
+    async function handleLogin(e) {
       e.preventDefault();
-      const companyName = document.getElementById('job-company').value.trim();
-      const title = document.getElementById('job-title').value.trim();
-      const region = document.getElementById('job-region').value;
-      const isAlwaysOn = document.getElementById('job-always-on').checked;
-      const deadline = isAlwaysOn ? '' : document.getElementById('job-deadline').value;
-      const status = document.querySelector('input[name="jobStatus"]:checked').value;
-      const memo = document.getElementById('job-memo').value.trim();
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value.trim();
+      const errBox = document.getElementById('login-error-msg');
+      errBox.classList.add('hidden');
 
-      const newJob = {
-        id: Date.now(),
-        companyName,
-        title,
-        region,
-        deadline,
-        isAlwaysOn,
-        status,
-        memo
+      try {
+        const res = await fetch('/api/jobs?action=login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errBox.innerText = data.error || '로그인 실패';
+          errBox.classList.remove('hidden');
+          return;
+        }
+        currentUser = data.user;
+        localStorage.setItem('my_job_map_user', JSON.stringify(currentUser));
+        applyAuthUI();
+        await loadJobsFromServer();
+      } catch (err) {
+        errBox.innerText = '서버 통신 오류';
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const inviteCode = document.getElementById('reg-invite-code').value.trim();
+      const username = document.getElementById('reg-username').value.trim();
+      const nickname = document.getElementById('reg-nickname').value.trim();
+      const password = document.getElementById('reg-password').value.trim();
+      const msgBox = document.getElementById('reg-status-msg');
+      msgBox.classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/jobs?action=register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ inviteCode, username, nickname, password })
+        });
+        const data = await res.json();
+        msgBox.classList.remove('hidden');
+        if (!res.ok) {
+          msgBox.className = "p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-medium";
+          msgBox.innerText = data.error || '가입 신청 실패';
+          return;
+        }
+        msgBox.className = "p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 font-bold";
+        msgBox.innerText = data.message;
+        document.getElementById('registerForm').reset();
+      } catch (err) {
+        msgBox.classList.remove('hidden');
+        msgBox.className = "p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 font-medium";
+        msgBox.innerText = '서버 통신 오류';
+      }
+    }
+
+    function logout() {
+      if (!confirm('로그아웃 하시겠습니까?')) return;
+      currentUser = null;
+      localStorage.removeItem('my_job_map_user');
+      companyTags = {};
+      applyAuthUI();
+      refreshUI();
+    }
+
+    async function checkPendingUsersCount() {
+      if (!currentUser || currentUser.role !== 'admin') return;
+      try {
+        const res = await fetch(`/api/jobs?action=admin_data&userId=${currentUser.id}`);
+        if (res.ok) {
+          const { users } = await res.json();
+          const pendingCount = (users || []).filter(u => u.status === 'pending').length;
+          const badge = document.getElementById('pending-user-badge');
+          if (pendingCount > 0) {
+            badge.innerText = pendingCount;
+            badge.classList.remove('hidden');
+          } else {
+            badge.classList.add('hidden');
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function openAdminModal() {
+      document.getElementById('admin-modal-backdrop').classList.remove('hidden');
+      await loadAdminData();
+    }
+
+    function closeAdminModal() { document.getElementById('admin-modal-backdrop').classList.add('hidden'); }
+
+    async function loadAdminData() {
+      if (!currentUser || currentUser.role !== 'admin') return;
+      try {
+        const res = await fetch(`/api/jobs?action=admin_data&userId=${currentUser.id}`);
+        if (!res.ok) return;
+        const { users, codes } = await res.json();
+
+        const codeContainer = document.getElementById('admin-invite-list');
+        if (!codes || codes.length === 0) {
+          codeContainer.innerHTML = `<span class="text-xs text-slate-400">발급된 초대코드가 없습니다.</span>`;
+        } else {
+          codeContainer.innerHTML = codes.map(c => `
+            <div class="inline-flex items-center space-x-2 px-3 py-1.5 bg-white border border-indigo-200 rounded-lg text-xs shadow-2xs">
+              <span class="font-mono font-extrabold text-indigo-700">${c.code}</span>
+              <span class="text-slate-600 font-medium">(${c.group_name})</span>
+              <button onclick="copyInviteCode('${c.code}')" class="text-slate-400 hover:text-blue-600"><i class="fa-regular fa-copy"></i></button>
+              <button onclick="manageUserAction('delete_code', null, '', '', '${c.code}')" class="text-slate-400 hover:text-red-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+          `).join('');
+        }
+
+        document.getElementById('admin-user-count').innerText = `총 ${users.length}명`;
+        const tbody = document.getElementById('admin-users-tbody');
+        tbody.innerHTML = users.map(u => {
+          const isPending = u.status === 'pending';
+          const isAdmin = u.role === 'admin';
+          return `
+            <tr class="${isPending ? 'bg-amber-50/60' : 'bg-white'}">
+              <td class="py-2.5 px-3">
+                ${isAdmin ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">👑 관리자</span>' : (isPending ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700">승인 대기</span>' : '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">활동 승인</span>')}
+              </td>
+              <td class="py-2.5 px-3 font-bold text-slate-800">${u.nickname} <span class="font-normal text-slate-400">(${u.username})</span></td>
+              <td class="py-2.5 px-3 text-slate-600">${u.group_name || '-'}</td>
+              <td class="py-2.5 px-3 text-slate-400 font-mono">${u.created_at || '-'}</td>
+              <td class="py-2.5 px-3 text-right space-x-1">
+                ${isPending ? `<button onclick="manageUserAction('approve', '${u.id}')" class="px-2.5 py-1 bg-emerald-600 text-white font-bold rounded-md text-[11px]">승인</button>` : ''}
+                <button onclick="editMemberAccount('${u.id}', '${u.username}', '${u.nickname}')" class="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md text-[11px] font-semibold">정보수정</button>
+                ${!isAdmin ? `<button onclick="manageUserAction('delete_user', '${u.id}')" class="px-2 py-1 bg-red-50 text-red-600 rounded-md text-[11px]">탈퇴</button>` : ''}
+              </td>
+            </tr>
+          `;
+        }).join('');
+        checkPendingUsersCount();
+      } catch (e) {}
+    }
+
+    async function createInviteCode(e) {
+      e.preventDefault();
+      const groupName = document.getElementById('admin-group-name').value.trim();
+      const customCode = document.getElementById('admin-custom-code').value.trim();
+      try {
+        const res = await fetch('/api/jobs?action=create_invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminId: currentUser.id, groupName, customCode })
+        });
+        if (res.ok) {
+          document.getElementById('admin-group-name').value = '';
+          document.getElementById('admin-custom-code').value = '';
+          await loadAdminData();
+        }
+      } catch (err) {}
+    }
+
+    function copyInviteCode(code) {
+      navigator.clipboard.writeText(code);
+      alert(`초대코드 [${code}]가 복사되었습니다!`);
+    }
+
+    async function manageUserAction(subAction, targetUserId, newUsername = '', newNickname = '', targetCode = '') {
+      if (subAction === 'delete_user' && !confirm('해당 회원을 탈퇴 처리하시겠습니까? (탈퇴 즉시 해당 회원의 접속이 차단됩니다)')) return;
+      try {
+        await fetch('/api/jobs?action=manage_user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminId: currentUser.id, subAction, targetUserId, newUsername, newNickname, targetCode })
+        });
+        await loadAdminData();
+      } catch (e) {}
+    }
+
+    async function editMemberAccount(targetUserId, curUser, curNick) {
+      const newId = prompt(`'${curNick}' 회원의 새로운 아이디를 입력하세요:`, curUser);
+      if (!newId || !newId.trim()) return;
+      const newNick = prompt(`'${curNick}' 회원의 새로운 닉네임을 입력하세요:`, curNick);
+      if (!newNick || !newNick.trim()) return;
+      const newPw = prompt(`'${curNick}' 회원의 새로운 비밀번호를 입력하세요 (변경 원치 않으시면 취소):`);
+
+      try {
+        await fetch('/api/jobs?action=manage_user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminId: currentUser.id, subAction: 'change_account', targetUserId, newUsername: newId.trim(), newNickname: newNick.trim() })
+        });
+        if (newPw && newPw.trim()) {
+          await fetch('/api/jobs?action=manage_user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ adminId: currentUser.id, subAction: 'reset_pw', targetUserId, newPassword: newPw.trim() })
+          });
+        }
+        alert(`'${newNick}' 회원의 정보가 수정되었습니다.`);
+        await loadAdminData();
+      } catch (e) { alert('오류 발생'); }
+    }
+
+    async function changeMyAdminAccount() {
+      const newId = prompt('변경할 새로운 관리자 아이디를 입력하세요:', currentUser.username);
+      if (!newId || !newId.trim()) return;
+      const newNick = prompt('변경할 관리자 닉네임을 입력하세요:', currentUser.nickname);
+      if (!newNick || !newNick.trim()) return;
+      const newPw = prompt('새로운 비밀번호를 입력하세요 (변경 원치 않으시면 취소):');
+
+      try {
+        await fetch('/api/jobs?action=manage_user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminId: currentUser.id, subAction: 'change_account', targetUserId: currentUser.id, newUsername: newId.trim(), newNickname: newNick.trim() })
+        });
+        if (newPw && newPw.trim()) {
+          await fetch('/api/jobs?action=manage_user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ adminId: currentUser.id, subAction: 'reset_pw', targetUserId: currentUser.id, newPassword: newPw.trim() })
+          });
+        }
+        alert('관리자 계정 정보가 변경되었습니다. 다시 로그인해 주세요.');
+        logout();
+      } catch (e) { alert('오류 발생'); }
+    }
+
+    async function loadJobsFromServer() {
+      fallbackLocal();
+      refreshUI();
+
+      try {
+        const uidParam = currentUser ? `?userId=${encodeURIComponent(currentUser.id)}&withTags=1` : '';
+        const res = await fetch(`/api/jobs${uidParam}`, { cache: 'no-store' });
+
+        if (res.status === 401 && currentUser) {
+          forceKickOut();
+          return;
+        }
+
+        if (res.ok) {
+          const serverData = await res.json();
+          let list = [];
+          if (Array.isArray(serverData)) {
+            list = serverData;
+          } else if (serverData && Array.isArray(serverData.jobs)) {
+            list = serverData.jobs;
+            if (serverData.companyTags) companyTags = serverData.companyTags;
+          }
+
+          if (list.length > 0) {
+            jobs = list;
+            localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
+          } else if (jobs.length > 0 && currentUser && currentUser.role === 'admin') {
+            for (const item of jobs) {
+              await fetch('/api/jobs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...item, userId: currentUser.id })
+              });
+            }
+          }
+          updateSyncBadge(true);
+        } else {
+          updateSyncBadge(false);
+        }
+      } catch (e) {
+        updateSyncBadge(false);
+      }
+      refreshUI();
+    }
+
+    function fallbackLocal() {
+      const stored = localStorage.getItem('my_jobs_data');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) jobs = parsed;
+        } catch(e) {}
+      }
+    }
+
+    function updateSyncBadge(isOnline) {
+      const badge = document.getElementById('sync-status-badge');
+      if (!badge) return;
+      if (isOnline) {
+        badge.className = "hidden sm:flex text-[11px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-medium px-2 py-0.5 rounded-full items-center gap-1";
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> D1 클라우드 동기화`;
+      } else {
+        badge.className = "hidden sm:flex text-[11px] bg-amber-50 text-amber-700 border border-amber-200 font-medium px-2 py-0.5 rounded-full items-center gap-1";
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> 오프라인 모드`;
+      }
+    }
+
+    function refreshUI() {
+      updateStats();
+      renderRegionChips();
+      renderCompanyPool();
+      renderPostings();
+      updateMapBadges();
+      highlightActiveMapRegions();
+    }
+
+    function isAlwaysOpen(deadlineStr) { return deadlineStr === '채용시마감' || deadlineStr === '상시채용' || !deadlineStr; }
+
+    function isExpired(deadlineStr) {
+      if (isAlwaysOpen(deadlineStr)) return false;
+      const today = new Date(); today.setHours(0,0,0,0);
+      const target = new Date(deadlineStr); target.setHours(0,0,0,0);
+      return (target - today) < 0;
+    }
+
+    function updateStats() {
+      const uniqueCompanies = new Set(jobs.map(j => (j.company || '').trim().toLowerCase())).size;
+      const activeJobs = jobs.filter(j => !isExpired(j.deadline)).length;
+      const appliedJobs = jobs.filter(j => j.status === '지원완료' || j.status === '1차면접' || j.status === '최종합격').length;
+      const archivedJobs = jobs.filter(j => isExpired(j.deadline)).length;
+
+      document.getElementById('stat-companies').innerText = uniqueCompanies;
+      document.getElementById('stat-active-jobs').innerText = activeJobs;
+      document.getElementById('stat-applied').innerText = appliedJobs;
+      document.getElementById('stat-archived').innerText = archivedJobs;
+    }
+
+    function updateMapBadges() {
+      const badgeMapping = {
+        '인천광역시': 'badge-incheon', '서울 강북권': 'badge-seoul-gb', '서울 서남부권': 'badge-seoul-sw1',
+        '서울 남부권': 'badge-seoul-sw2', '서울 강남권': 'badge-seoul-gn', '경기 남부 1구역': 'badge-gyeonggi-s1',
+        '경기 남부 2구역': 'badge-gyeonggi-s2', '경기 남부 3구역': 'badge-gyeonggi-s3', '수원시': 'badge-suwon',
+        '화성시(동탄)': 'badge-dongtan', '강원권': 'badge-nat-강원권', '대전/충청권': 'badge-nat-대전충청',
+        '경상권': 'badge-nat-경상권', '전라권': 'badge-nat-전라권'
       };
 
-      allJobs.unshift(newJob);
-      saveJobsToStorage();
-      closeJobModal();
+      const activeCounts = {};
+      let totalCapitalActiveCount = 0;
 
-      if (isAlwaysOn) switchTab('alwaysOn');
-      else switchTab('active');
-      renderAll();
+      jobs.filter(j => !isExpired(j.deadline)).forEach(j => {
+        const reg = normalizeRegion(j.region);
+        activeCounts[reg] = (activeCounts[reg] || 0) + 1;
+        if (isCapitalRegion(reg)) totalCapitalActiveCount++;
+      });
+
+      Object.entries(badgeMapping).forEach(([regName, badgeId]) => {
+        const badgeEl = document.getElementById(badgeId);
+        if (!badgeEl) return;
+        const count = activeCounts[regName] || 0;
+        if (count > 0) {
+          badgeEl.style.display = 'inline';
+          const textEl = badgeEl.querySelector('.badge-text');
+          if (textEl) textEl.textContent = count > 99 ? '99+' : count;
+        } else {
+          badgeEl.style.display = 'none';
+        }
+      });
+
+      const natCapitalBadge = document.getElementById('badge-nat-수도권');
+      if (natCapitalBadge) {
+        if (totalCapitalActiveCount > 0) {
+          natCapitalBadge.style.display = 'inline';
+          const textEl = natCapitalBadge.querySelector('.badge-text');
+          if (textEl) textEl.textContent = totalCapitalActiveCount > 99 ? '99+' : totalCapitalActiveCount;
+        } else {
+          natCapitalBadge.style.display = 'none';
+        }
+      }
     }
 
-    // 회원 정보수정 및 비밀번호 변경
-    function openProfileModal() {
-      document.getElementById('current-pw').value = '';
-      document.getElementById('new-pw').value = '';
-      document.getElementById('new-pw-confirm').value = '';
-      document.getElementById('profile-modal').classList.remove('hidden');
-      document.getElementById('profile-modal').classList.add('flex');
+    function setArchiveTab(tab) {
+      currentArchiveTab = tab;
+      const tabActive = document.getElementById('tab-active-only');
+      const tabAll = document.getElementById('tab-all-archive');
+      if (tab === 'active') {
+        tabActive.className = "px-3 py-1.5 rounded-md bg-white text-blue-600 shadow-xs transition";
+        tabAll.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition";
+      } else {
+        tabAll.className = "px-3 py-1.5 rounded-md bg-white text-blue-600 shadow-xs transition";
+        tabActive.className = "px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition";
+      }
+      renderPostings();
     }
 
-    function closeProfileModal() {
-      document.getElementById('profile-modal').classList.add('hidden');
-      document.getElementById('profile-modal').classList.remove('flex');
+    function switchMapView(view) {
+      currentMapView = view;
+      const capitalSvg = document.getElementById('svg-capital-view');
+      const nationalSvg = document.getElementById('svg-national-view');
+      const tabCap = document.getElementById('view-tab-capital');
+      const tabNat = document.getElementById('view-tab-national');
+      if (view === 'capital') {
+        capitalSvg.classList.remove('hidden'); nationalSvg.classList.add('hidden');
+        tabCap.className = "px-3 py-1.5 rounded-lg bg-white text-blue-600 shadow-xs transition";
+        tabNat.className = "px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition";
+      } else {
+        capitalSvg.classList.add('hidden'); nationalSvg.classList.remove('hidden');
+        tabNat.className = "px-3 py-1.5 rounded-lg bg-white text-blue-600 shadow-xs transition";
+        tabCap.className = "px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition";
+      }
+      highlightActiveMapRegions();
     }
 
-    function handleUserPasswordChange(e) {
-      e.preventDefault();
-      const currentPw = document.getElementById('current-pw').value;
-      const newPw = document.getElementById('new-pw').value;
-      const confirmPw = document.getElementById('new-pw-confirm').value;
+    function filterByRegion(region) {
+      const target = normalizeRegion(region);
+      if (!target || selectedRegion === target) selectedRegion = null;
+      else selectedRegion = target;
 
-      if (newPw !== confirmPw) {
-        alert('새 비밀번호가 일치하지 않습니다.');
+      selectedCompany = null; activePopupCompany = null;
+      const badge = document.getElementById('current-filter-badge');
+      const resetBtn = document.getElementById('reset-filter-btn');
+
+      if (selectedRegion) {
+        const count = jobs.filter(j => matchesRegionFilter(j.region, selectedRegion)).length;
+        badge.innerText = `${selectedRegion} (${count}건 아카이브)`;
+        badge.className = "text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-0.5 rounded-full";
+        resetBtn.classList.remove('hidden');
+      } else {
+        badge.innerText = "전체 구역";
+        badge.className = "text-xs bg-slate-100 text-slate-700 font-medium px-2.5 py-0.5 rounded-full";
+        resetBtn.classList.add('hidden');
+      }
+      highlightActiveMapRegions(); renderRegionChips(); renderCompanyPool(); renderPostings();
+    }
+
+    function handleCompanyClick(event, comp) {
+      event.stopPropagation();
+      if (selectedCompany === comp) {
+        selectedCompany = null; activePopupCompany = null; filterByRegion(null);
+      } else {
+        const matchedJob = jobs.find(j => (j.company || '').trim().toLowerCase() === comp.toLowerCase());
+        if (matchedJob && matchedJob.region) {
+          const compRegion = normalizeRegion(matchedJob.region);
+          if (selectedRegion !== compRegion) {
+            selectedRegion = compRegion;
+            const badge = document.getElementById('current-filter-badge');
+            const resetBtn = document.getElementById('reset-filter-btn');
+            const count = jobs.filter(j => matchesRegionFilter(j.region, compRegion)).length;
+            badge.innerText = `${compRegion} (${count}건 아카이브)`;
+            badge.className = "text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-0.5 rounded-full";
+            resetBtn.classList.remove('hidden');
+            highlightActiveMapRegions(); renderRegionChips();
+          }
+        }
+        selectedCompany = comp; activePopupCompany = comp;
+        renderCompanyPool(); renderPostings();
+      }
+    }
+
+    function closeCompanyPopupOutside(event) {
+      if (activePopupCompany && !event.target.closest('#company-pool-container')) {
+        activePopupCompany = null; renderCompanyPool();
+      }
+    }
+
+    async function setCompanyTag(event, comp, tagType) {
+      event.stopPropagation();
+      let finalTag = tagType;
+      if (companyTags[comp] === tagType || tagType === null) {
+        delete companyTags[comp]; finalTag = null;
+      } else { companyTags[comp] = tagType; }
+      renderCompanyPool(); renderPostings();
+      if (currentUser) {
+        try {
+          const res = await fetch('/api/jobs?action=save_tag', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: currentUser.id, company: comp, tag: finalTag })
+          });
+          if (res.status === 401) forceKickOut();
+        } catch (e) {}
+      }
+    }
+
+    async function deleteCompanyFromPool(event, comp) {
+      event.stopPropagation();
+      if (!currentUser || currentUser.role !== 'admin') { alert('관리자만 삭제할 수 있습니다.'); return; }
+      const targetJobs = jobs.filter(j => (j.company || '').trim().toLowerCase() === comp.toLowerCase());
+      if (!confirm(`'${comp}' 기업을 삭제하시겠습니까? 관련 공고 ${targetJobs.length}건이 함께 삭제됩니다.`)) return;
+      for (const j of targetJobs) {
+        try { await fetch(`/api/jobs?id=${j.id}`, { method: 'DELETE' }); } catch(e) {}
+      }
+      jobs = jobs.filter(j => (j.company || '').trim().toLowerCase() !== comp.toLowerCase());
+      delete companyTags[comp];
+      localStorage.setItem('my_jobs_data', JSON.stringify(jobs));
+      selectedCompany = null; activePopupCompany = null;
+      refreshUI(); alert('삭제되었습니다.');
+    }
+
+    function getTagBadgeHtml(tag) {
+      if (tag === 'check') return `<span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 font-black text-[10px] ml-0.5">✔</span>`;
+      if (tag === 'cross') return `<span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-100 text-red-600 font-black text-[10px] ml-0.5">✖</span>`;
+      if (tag === 'square') return `<span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-200 text-slate-900 font-black text-[9px] ml-0.5">■</span>`;
+      return '';
+    }
+
+    function highlightActiveMapRegions() {
+      document.querySelectorAll('.region-group').forEach(el => el.classList.remove('active'));
+      if (!selectedRegion) return;
+      const mapping = {
+        '인천광역시': 'grp-incheon', '서울 강북권': 'grp-seoul-gb', '서울 서남부권': 'grp-seoul-sw1',
+        '서울 남부권': 'grp-seoul-sw2', '서울 강남권': 'grp-seoul-gn', '경기 남부 1구역': 'grp-gyeonggi-s1',
+        '경기 남부 2구역': 'grp-gyeonggi-s2', '경기 남부 3구역': 'grp-gyeonggi-s3', '수원시': 'grp-suwon',
+        '화성시(동탄)': 'grp-dongtan', '수도권 전체': 'grp-nat-수도권', '강원권': 'grp-nat-강원권',
+        '대전/충청권': 'grp-nat-대전충청', '경상권': 'grp-nat-경상권', '전라권': 'grp-nat-전라권'
+      };
+      const targetId = mapping[selectedRegion];
+      if (targetId) document.getElementById(targetId)?.classList.add('active');
+      if (isCapitalRegion(selectedRegion)) document.getElementById('grp-nat-수도권')?.classList.add('active');
+    }
+
+    function renderCompanyPool() {
+      const container = document.getElementById('company-pool-container');
+      const title = document.getElementById('archive-region-title');
+      const countBadge = document.getElementById('archive-company-count');
+      const poolSearchInput = document.getElementById('companyPoolSearchInput');
+      const keyword = poolSearchInput ? poolSearchInput.value.trim().toLowerCase() : '';
+
+      title.innerText = selectedRegion ? `'${selectedRegion}'` : '전체 구역';
+      const targetJobs = selectedRegion ? jobs.filter(j => matchesRegionFilter(j.region, selectedRegion)) : jobs;
+      const compMap = {}, compRegionMap = {};
+      targetJobs.forEach(j => {
+        const c = (j.company || '').trim();
+        if (!c) return;
+        compMap[c] = (compMap[c] || 0) + 1;
+        if (!compRegionMap[c]) compRegionMap[c] = normalizeRegion(j.region);
+      });
+
+      let companies = Object.keys(compMap);
+      if (keyword) companies = companies.filter(c => c.toLowerCase().includes(keyword));
+      companies.sort((a, b) => a.localeCompare(b, 'ko', { sensitivity: 'base' }));
+      countBadge.innerText = `${companies.length}개사`;
+
+      if (companies.length === 0) {
+        container.innerHTML = `<div class="py-2 text-xs text-slate-400">등록된 기업이 없습니다.</div>`;
         return;
       }
 
-      const target = users[0];
-      if (target.password !== currentPw) {
-        alert('현재 비밀번호가 일치하지 않습니다. (관리자 초기화 시 "0000")');
-        return;
-      }
+      const isAdmin = currentUser && currentUser.role === 'admin';
+      container.innerHTML = companies.map(comp => {
+        const isSelected = selectedCompany === comp;
+        const count = compMap[comp];
+        const currentTag = companyTags[comp] || null;
+        const isPopupOpen = activePopupCompany === comp;
+        const belongRegion = compRegionMap[comp] || '';
 
-      target.password = newPw;
-      alert('비밀번호가 성공적으로 변경되었습니다.');
-      closeProfileModal();
-    }
-
-    // 관리자 모달 (0000 초기화 전용)
-    function openAdminModal() {
-      renderAdminUserList();
-      document.getElementById('admin-modal').classList.remove('hidden');
-      document.getElementById('admin-modal').classList.add('flex');
-    }
-
-    function closeAdminModal() {
-      document.getElementById('admin-modal').classList.add('hidden');
-      document.getElementById('admin-modal').classList.remove('flex');
-    }
-
-    function renderAdminUserList() {
-      const tbody = document.getElementById('admin-user-tbody');
-      tbody.innerHTML = users.map(u => `
-        <tr class="hover:bg-slate-50">
-          <td class="py-3 px-4 font-bold text-slate-800">${u.id}</td>
-          <td class="py-3 px-4 text-slate-600 font-medium">${u.nickname}</td>
-          <td class="py-3 px-4 text-right">
-            <button onclick="adminResetPassword('${u.id}')" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-bold transition">
-              0000 초기화
+        return `
+          <div class="relative inline-block">
+            <button onclick="handleCompanyClick(event, '${comp}')" class="px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center space-x-1.5 transition ${isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-indigo-50/60 hover:bg-indigo-100 text-indigo-900 border-indigo-200/80'}">
+              <i class="fa-regular fa-building text-[10px]"></i><span>${comp}</span>${getTagBadgeHtml(currentTag)}
+              <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-indigo-700 text-indigo-100' : 'bg-white text-indigo-600 border border-indigo-100'}">${count}건</span>
             </button>
-          </td>
-        </tr>
-      `).join('');
+
+            ${isPopupOpen ? `
+              <div onclick="event.stopPropagation()" class="absolute left-0 top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-xl shadow-xl p-2.5 w-60 text-xs flex flex-col space-y-2">
+                <div class="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                  <div class="truncate max-w-[140px]">
+                    <span class="font-bold text-slate-800">${comp}</span>
+                    <span class="block text-[10px] text-slate-400">${belongRegion}</span>
+                  </div>
+                  <span class="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">내 태그</span>
+                </div>
+                <div class="grid grid-cols-3 gap-1.5 pt-0.5">
+                  <button onclick="setCompanyTag(event, '${comp}', 'check')" class="p-1.5 rounded-lg border transition ${currentTag === 'check' ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-bold' : 'border-slate-200 text-slate-600'}">✔ 선호</button>
+                  <button onclick="setCompanyTag(event, '${comp}', 'cross')" class="p-1.5 rounded-lg border transition ${currentTag === 'cross' ? 'bg-red-50 border-red-500 text-red-700 font-bold' : 'border-slate-200 text-slate-600'}">✖ 제외</button>
+                  <button onclick="setCompanyTag(event, '${comp}', 'square')" class="p-1.5 rounded-lg border transition ${currentTag === 'square' ? 'bg-slate-100 border-slate-800 text-slate-900 font-bold' : 'border-slate-200 text-slate-600'}">■ 보류</button>
+                </div>
+                <div class="flex items-center justify-between pt-1 border-t border-slate-100">
+                  ${currentTag ? `<button onclick="setCompanyTag(event, '${comp}', null)" class="text-[11px] text-slate-500">태그 해제</button>` : `<span></span>`}
+                  ${isAdmin ? `<button onclick="deleteCompanyFromPool(event, '${comp}')" class="text-[11px] text-red-600">기업 삭제</button>` : ``}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
     }
 
-    function adminResetPassword(userId) {
-      if (!confirm(`[${userId}] 회원의 비밀번호를 '0000'으로 초기화하시겠습니까?`)) return;
-      users = users.map(u => u.id === userId ? { ...u, password: '0000' } : u);
-      alert(`[${userId}] 비밀번호가 '0000'으로 초기화되었습니다.`);
-      renderAdminUserList();
+    function renderRegionChips() {
+      const container = document.getElementById('quick-region-chips');
+      const targetRegions = ["수도권 전체", "수원시", "화성시(동탄)", "서울 강남권", "경기 남부 3구역", "경기 남부 2구역", "경기 남부 1구역", "서울 서남부권", "서울 남부권", "서울 강북권", "인천광역시", "대전/충청권"];
+      container.innerHTML = targetRegions.map(reg => {
+        const count = jobs.filter(j => matchesRegionFilter(j.region, reg)).length;
+        const activeCount = jobs.filter(j => matchesRegionFilter(j.region, reg) && !isExpired(j.deadline)).length;
+        const isSelected = selectedRegion === reg;
+        return `<button onclick="filterByRegion('${reg}')" class="whitespace-nowrap px-2.5 py-1 rounded-lg border text-xs transition flex items-center space-x-1 ${isSelected ? 'bg-blue-600 text-white font-bold' : 'bg-white text-slate-700 border-slate-200'}"><span>${reg}</span> <span class="opacity-75 text-[10px]">(${count})</span> ${activeCount > 0 ? '<span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block ml-0.5"></span>' : ''}</button>`;
+      }).join('');
     }
 
-    window.addEventListener('DOMContentLoaded', initApp);
+    function getDDay(deadlineStr) {
+      if (isAlwaysOpen(deadlineStr)) {
+        return { text: "D-∞", color: "bg-orange-100/80 text-orange-800 font-bold border border-orange-300", diff: -999999, isAlways: true };
+      }
+      const today = new Date(); today.setHours(0,0,0,0);
+      const target = new Date(deadlineStr); target.setHours(0,0,0,0);
+      const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+
+      if (diff < 0) return { text: "마감 아카이브", color: "bg-slate-200 text-slate-800 font-bold border border-slate-300", diff, isExpired: true };
+      if (diff === 0) return { text: "D-Day (오늘)", color: "bg-red-500 text-white font-bold animate-pulse", diff, isUrgent: true };
+      if (diff <= 3) return { text: `D-${diff} 임박`, color: "bg-rose-100 text-rose-800 font-bold border border-rose-300", diff, isUrgent: true };
+      if (diff <= 7) return { text: `D-${diff}`, color: "bg-amber-100 text-amber-800 font-semibold border border-amber-300", diff, isUrgent: true };
+      return { text: `D-${diff}`, color: "bg-blue-50 text-blue-700 font-medium border border-blue-200", diff };
+    }
+
+    function getStatusBadge(status) {
+      switch(status) {
+        case '관심': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">관심 공고</span>';
+        case '서류작성중': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">서류 작성 중</span>';
+        case '지원완료': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">지원 완료</span>';
+        case '1차면접': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">1차 면접 예정</span>';
+        case '최종합격': return '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-600 text-white">최종 합격</span>';
+        default: return `<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700">${status}</span>`;
+      }
+    }
+
+    function renderPostings() {
+      const listContainer = document.getElementById('posting-list');
+      const search = document.getElementById('searchInput').value.trim().toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+
+      let filtered = jobs.filter(item => {
+        const matchesRegion = matchesRegionFilter(item.region, selectedRegion);
+        const matchesCompany = !selectedCompany || (item.company || '').trim().toLowerCase() === selectedCompany.toLowerCase();
+        const matchesSearch = !search || (item.company || '').toLowerCase().includes(search) || (item.title || '').toLowerCase().includes(search);
+        const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
+        const expired = isExpired(item.deadline);
+        const matchesTab = currentArchiveTab === 'all' || !expired;
+        return matchesRegion && matchesCompany && matchesSearch && matchesStatus && matchesTab;
+      });
+
+      if (currentArchiveTab === 'active') {
+        filtered.sort((a, b) => {
+          const ddayA = getDDay(a.deadline), ddayB = getDDay(b.deadline);
+          if (ddayA.isAlways && !ddayB.isAlways) return -1;
+          if (!ddayA.isAlways && ddayB.isAlways) return 1;
+          return ddayA.diff - ddayB.diff;
+        });
+      } else {
+        filtered.sort((a, b) => (a.company || '').localeCompare(b.company || '', 'ko', { sensitivity: 'base' }));
+      }
+
+      document.getElementById('list-count').innerText = `${filtered.length}건`;
+      if (filtered.length === 0) {
+        listContainer.innerHTML = `<div class="col-span-full py-12 text-center bg-white rounded-2xl border border-dashed border-slate-200"><p class="text-xs text-slate-500">조건에 맞는 공고가 없습니다.</p></div>`;
+        return;
+      }
+
+      const isAdmin = currentUser && currentUser.role === 'admin';
+      listContainer.innerHTML = filtered.map(job => {
+        const dday = getDDay(job.deadline);
+        const displayRegion = normalizeRegion(job.region);
+        const tag = companyTags[(job.company || '').trim()] || null;
+        const interestCnt = job.interestCount || 0;
+        const appliedCnt = job.appliedCount || 0;
+        const creator = job.createdBy || '관리자';
+
+        let borderClass = "border border-slate-200 bg-white";
+        if (dday.isExpired) borderClass = "border-2 border-slate-900 bg-slate-50/70 shadow-xs";
+        else if (dday.isAlways) borderClass = "border-2 border-orange-400/80 bg-orange-50/50 shadow-xs";
+        else if (dday.isUrgent) borderClass = "border-2 border-rose-500 bg-rose-50/60 shadow-xs";
+
+        return `
+          <div class="rounded-xl ${borderClass} p-5 transition flex flex-col justify-between relative overflow-hidden">
+            <div>
+              <div class="flex items-start justify-between gap-2 mb-2 pr-6">
+                <div>
+                  <button onclick="handleCompanyClick(event, '${job.company}')" class="text-xs font-bold text-indigo-700 hover:underline uppercase tracking-wider text-left inline-flex items-center gap-1">
+                    <i class="fa-regular fa-building"></i><span>${job.company}</span>${getTagBadgeHtml(tag)}
+                  </button>
+                  <h4 class="text-sm font-bold text-slate-900 mt-0.5 line-clamp-1">${job.title}</h4>
+                </div>
+                <span class="text-xs px-2.5 py-0.5 rounded-full ${dday.color} shrink-0">${dday.text}</span>
+              </div>
+
+              <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 mb-3">
+                <span class="flex items-center space-x-1"><i class="fa-solid fa-location-dot text-slate-400"></i> <span>${displayRegion}</span></span>
+                <div class="flex items-center space-x-1 text-[11px]">
+                  <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 font-semibold">⭐ 관심 ${interestCnt}</span>
+                  <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">📩 지원 ${appliedCnt}</span>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between p-2.5 bg-white/80 rounded-lg text-xs mb-3 border border-slate-200/80 shadow-2xs">
+                <div class="flex items-center space-x-2"><span class="text-slate-500 font-medium">내 상태:</span>${getStatusBadge(job.status)}</div>
+                ${job.appliedDate ? `<span class="text-[11px] text-slate-500 font-mono">${job.appliedDate} 접수</span>` : `<button onclick="editJob('${job.id}')" class="text-[11px] text-indigo-600 hover:underline font-medium">내 상태 설정</button>`}
+              </div>
+
+              ${job.memo ? `<p class="text-xs text-slate-600 bg-white/90 p-2 rounded-lg border border-slate-200/80 mb-3 shadow-2xs"><i class="fa-solid fa-lock text-indigo-400 mr-1 text-[10px]"></i>${job.memo}</p>` : ''}
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-200/70 flex items-center justify-between text-xs">
+              <div class="flex items-center space-x-2">
+                ${job.url ? `<a href="${job.url}" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold flex items-center space-x-1"><span>공고 원문</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i></a>` : ``}
+                <span class="text-[11px] text-slate-400">• 등록: <strong class="text-slate-600">${creator}</strong></span>
+              </div>
+              <div class="flex items-center space-x-1">
+                <button onclick="editJob('${job.id}')" class="text-slate-500 hover:text-blue-600 transition px-2 py-1 rounded-lg hover:bg-white/80 flex items-center gap-1 text-[11px] font-medium">
+                  <i class="fa-regular fa-pen-to-square"></i><span>수정/상태</span>
+                </button>
+                ${isAdmin ? `<button onclick="deleteJob('${job.id}')" class="text-slate-400 hover:text-red-500 transition p-1.5 rounded-lg"><i class="fa-regular fa-trash-can"></i></button>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleAlwaysOpen() {
+      const checkbox = document.getElementById('form-always-open');
+      const deadlineInput = document.getElementById('form-deadline');
+      if (checkbox.checked) {
+        deadlineInput.value = ''; deadlineInput.disabled = true; deadlineInput.required = false;
+        deadlineInput.classList.add('bg-slate-100', 'text-slate-400');
+      } else {
+        deadlineInput.disabled = false; deadlineInput.required = true;
+        deadlineInput.classList.remove('bg-slate-100', 'text-slate-400');
+      }
+    }
+
+    function openModal() {
+      document.getElementById('jobForm').reset();
+      document.getElementById('form-edit-id').value = '';
+      document.getElementById('modal-title').innerText = '새 채용 공고 등록';
+      document.getElementById('form-submit-btn').innerText = '저장하기';
+      document.getElementById('form-close-job-btn').classList.add('hidden');
+      document.getElementById('form-always-open').checked = false;
+      toggleAlwaysOpen();
+      document.getElementById('history-detect-banner').classList.add('hidden');
+      document.getElementById('modal-backdrop').classList.remove('hidden');
+    }
+
+    function editJob(id) {
+      const job = jobs.find(j => j.id === id);
+      if (!job) return;
+      document.getElementById('jobForm').reset();
+      document.getElementById('form-edit-id').value = job.id;
+      document.getElementById('modal-title').innerText = '공고 정보 수정 & 내 상태 설정';
+      document.getElementById('form-submit-btn').innerText = '변경 내용 저장';
+      document.getElementById('form-close-job-btn').classList.remove('hidden');
+      document.getElementById('history-detect-banner').classList.add('hidden');
+
+      document.getElementById('form-company').value = job.company;
+      document.getElementById('form-title').value = job.title;
+      document.getElementById('form-region').value = normalizeRegion(job.region);
+      document.getElementById('form-url').value = job.url || '';
+      document.getElementById('form-status').value = job.status || '관심';
+      document.getElementById('form-applied-date').value = job.appliedDate || '';
+      document.getElementById('form-memo').value = job.memo || '';
+
+      const alwaysCheckbox = document.getElementById('form-always-open');
+      const deadlineInput = document.getElementById('form-deadline');
+      if (isAlwaysOpen(job.deadline)) { alwaysCheckbox.checked = true; toggleAlwaysOpen(); }
+      else { alwaysCheckbox.checked = false; toggleAlwaysOpen(); deadlineInput.value = job.deadline; }
+      document.getElementById('modal-backdrop').classList.remove('hidden');
+    }
+
+    async function archiveCurrentJobFromModal() {
+      const editId = document.getElementById('form-edit-id').value.trim();
+      if (!editId) return;
+      const job = jobs.find(j => j.id === editId);
+      if (!job) return;
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const updatedJob = { ...job, deadline: todayStr, userId: currentUser ? currentUser.id : 'admin-1' };
+      try {
+        const res = await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedJob) });
+        if (res.status === 401) { forceKickOut(); return; }
+      } catch (e) {}
+      await loadJobsFromServer(); closeModal(); alert('마감 처리되었습니다.');
+    }
+
+    function closeModal() { document.getElementById('modal-backdrop').classList.add('hidden'); }
+
+    function checkCompanyHistory() {
+      if (document.getElementById('form-edit-id').value) return;
+      const companyVal = document.getElementById('form-company').value.trim();
+      const banner = document.getElementById('history-detect-banner');
+      const bannerText = document.getElementById('history-detect-text');
+      const regionSelect = document.getElementById('form-region');
+      if (!companyVal) { banner.classList.add('hidden'); return; }
+      const match = jobs.find(j => (j.company || '').toLowerCase() === companyVal.toLowerCase());
+      if (match) {
+        const normRegion = normalizeRegion(match.region);
+        regionSelect.value = normRegion;
+        bannerText.innerHTML = `<span>'<strong>${match.company}</strong>' 등록 이력이 있어 <strong>${normRegion}</strong>이 자동 선택되었습니다.</span>`;
+        banner.classList.remove('hidden');
+      } else { banner.classList.add('hidden'); }
+    }
+
+    function handleManualRegionChange() {}
+
+    async function saveJobPosting(e) {
+      e.preventDefault();
+      const editId = document.getElementById('form-edit-id').value.trim();
+      const company = document.getElementById('form-company').value.trim();
+      const title = document.getElementById('form-title').value.trim();
+      const region = normalizeRegion(document.getElementById('form-region').value);
+      const isAlways = document.getElementById('form-always-open').checked;
+      const deadline = isAlways ? '채용시마감' : document.getElementById('form-deadline').value;
+      const url = document.getElementById('form-url').value.trim();
+      const status = document.getElementById('form-status').value;
+      const appliedDate = document.getElementById('form-applied-date').value;
+      const memo = document.getElementById('form-memo').value.trim();
+
+      const payload = {
+        id: editId || ("job-" + Date.now()),
+        company, title, region, deadline, url, status, appliedDate, memo,
+        userId: currentUser ? currentUser.id : 'admin-1',
+        createdBy: currentUser ? currentUser.nickname : '관리자'
+      };
+
+      try {
+        const res = await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (res.status === 401) { closeModal(); forceKickOut(); return; }
+      } catch (err) {}
+      await loadJobsFromServer(); closeModal();
+    }
+
+    async function deleteJob(id) {
+      if (!currentUser || currentUser.role !== 'admin') { alert('관리자만 삭제할 수 있습니다.'); return; }
+      if (confirm('이 공고를 영구 삭제하시겠습니까?')) {
+        try { await fetch(`/api/jobs?id=${id}`, { method: 'DELETE' }); } catch (e) {}
+        await loadJobsFromServer();
+      }
+    }
+
+    function exportData() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ jobs, companyTags }, null, 2));
+      const a = document.createElement('a'); a.href = dataStr; a.download = `내일의지도_백업.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    async function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          const list = Array.isArray(imported) ? imported : (imported.jobs || []);
+          for (const item of list) {
+            item.region = normalizeRegion(item.region);
+            item.userId = currentUser ? currentUser.id : 'admin-1';
+            await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
+          }
+          await loadJobsFromServer(); alert('복원되었습니다.');
+        } catch(err) { alert('파일 오류'); }
+      };
+      reader.readAsText(file);
+    }
+
+    initAuth();
   </script>
 </body>
 </html>
