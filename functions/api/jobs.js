@@ -1,5 +1,5 @@
 // functions/api/jobs.js
-// 기존 DB 데이터 100% 보존 + 다중 사용자/초대코드/관리자 기능을 자동 세팅하는 통합 API
+// 관리자 아이디 변경 기능이 포함된 다중 사용자 API
 
 async function ensureTables(db) {
   await db.batch([
@@ -50,10 +50,9 @@ async function ensureTables(db) {
       PRIMARY KEY (user_id, company)
     )`),
     db.prepare(`INSERT OR IGNORE INTO users (id, username, password, nickname, role, status, invite_code, group_name, created_at)
-      VALUES ('admin-1', 'gh', 'admin1234', 'GH', 'admin', 'approved', 'MASTER', '총괄관리자', '2026-11-13')`)
+      VALUES ('admin-1', 'gh', 'admin1234', '관리자', 'admin', 'approved', 'MASTER', '총괄관리자', '2026-11-13')`)
   ]);
 
-  // 기존 jobs 테이블에 없는 컬럼이 있을 경우 에러 없이 안전하게 추가
   try { await db.prepare(`ALTER TABLE jobs ADD COLUMN created_by TEXT`).run(); } catch (e) {}
   try { await db.prepare(`ALTER TABLE jobs ADD COLUMN createdAt TEXT`).run(); } catch (e) {}
 }
@@ -80,9 +79,7 @@ export async function onRequest(context) {
   try {
     await ensureTables(db);
 
-    // ==================== [1. 조회 (GET)] ====================
     if (method === 'GET') {
-      // 관리자 전용: 전체 회원 및 초대코드 목록 조회
       if (action === 'admin_data') {
         const adminCheck = await db.prepare(`SELECT role FROM users WHERE id = ?`).bind(userId).first();
         if (!adminCheck || adminCheck.role !== 'admin') {
@@ -97,11 +94,9 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ users, codes }), { headers });
       }
 
-      // 공고 목록 조회 (기존 createdAt 정렬 유지)
       const { results: jobsRaw } = await db.prepare(`SELECT * FROM jobs ORDER BY createdAt DESC`).all();
       const { results: allStatuses } = await db.prepare(`SELECT user_id, job_id, status, applied_date, memo FROM user_job_status`).all();
 
-      // 기존 단일 사용자 시절 저장된 상태값을 관리자('admin-1') 개인 기록으로 자동 백업 이관
       for (const jb of jobsRaw) {
         if (jb.status || jb.appliedDate || jb.memo) {
           await db.prepare(`INSERT OR IGNORE INTO user_job_status (user_id, job_id, status, applied_date, memo, updated_at) VALUES ('admin-1', ?, ?, ?, ?, ?)`)
@@ -116,7 +111,6 @@ export async function onRequest(context) {
         tagRows.forEach(r => { myTags[r.company] = r.tag; });
       }
 
-      // 공고별 관심/지원 인원수 익명 집계 및 로그인 유저 상태 매핑
       const countsMap = {};
       const myStatusMap = {};
 
@@ -145,7 +139,6 @@ export async function onRequest(context) {
         const myData = myStatusMap[j.id];
         const counts = countsMap[j.id] || { interest: 0, applied: 0 };
 
-        // 아직 2단계(로그인 화면) 적용 전이거나 비로그인일 때는 기존 테이블 값 그대로 표시
         const resolvedStatus = userId ? (myData ? myData.status : '관심') : (j.status || '관심');
         const resolvedAppliedDate = userId ? (myData ? (myData.applied_date || '') : '') : (j.appliedDate || '');
         const resolvedMemo = userId ? (myData ? (myData.memo || '') : '') : (j.memo || '');
@@ -158,7 +151,7 @@ export async function onRequest(context) {
           region: j.region,
           deadline: j.deadline,
           url: j.url,
-          createdBy: j.created_by || 'GH',
+          createdBy: j.created_by || '관리자',
           status: resolvedStatus,
           appliedDate: resolvedAppliedDate,
           memo: resolvedMemo,
@@ -168,18 +161,15 @@ export async function onRequest(context) {
         };
       });
 
-      // 현재 index.html과 100% 호환 유지
       if (!url.searchParams.has('userId')) {
         return new Response(JSON.stringify(enrichedJobs), { headers });
       }
       return new Response(JSON.stringify({ jobs: enrichedJobs, companyTags: myTags }), { headers });
     }
 
-    // ==================== [2. 등록 / 로그인 / 관리 (POST)] ====================
     if (method === 'POST') {
       const body = await request.json();
 
-      // (A) 로그인
       if (action === 'login') {
         const { username, password } = body;
         const user = await db.prepare(`SELECT * FROM users WHERE username = ? AND password = ?`)
@@ -207,7 +197,6 @@ export async function onRequest(context) {
         }), { headers });
       }
 
-      // (B) 초대코드 회원가입 신청
       if (action === 'register') {
         const { username, password, nickname, inviteCode } = body;
         const cleanCode = (inviteCode || '').trim().toUpperCase();
@@ -235,7 +224,6 @@ export async function onRequest(context) {
         }), { headers });
       }
 
-      // (C) 관리자: 그룹별 랜덤 초대코드 생성
       if (action === 'create_invite') {
         const { adminId, groupName, customCode } = body;
         const adminCheck = await db.prepare(`SELECT role FROM users WHERE id = ?`).bind(adminId).first();
@@ -254,9 +242,8 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ success: true, code, groupName }), { headers });
       }
 
-      // (D) 관리자: 회원 승인/탈퇴/비번초기화 및 초대코드 삭제
       if (action === 'manage_user') {
-        const { adminId, targetUserId, subAction, newPassword, targetCode } = body;
+        const { adminId, targetUserId, subAction, newPassword, newUsername, newNickname, targetCode } = body;
         const adminCheck = await db.prepare(`SELECT role FROM users WHERE id = ?`).bind(adminId).first();
         if (!adminCheck || adminCheck.role !== 'admin') {
           return new Response(JSON.stringify({ error: '관리자 권한이 없습니다.' }), { status: 403, headers });
@@ -270,6 +257,8 @@ export async function onRequest(context) {
           await db.prepare(`DELETE FROM user_company_tags WHERE user_id = ?`).bind(targetUserId).run();
         } else if (subAction === 'reset_pw') {
           await db.prepare(`UPDATE users SET password = ? WHERE id = ?`).bind(newPassword, targetUserId).run();
+        } else if (subAction === 'change_account') {
+          await db.prepare(`UPDATE users SET username = ?, nickname = ? WHERE id = ?`).bind(newUsername, newNickname, targetUserId).run();
         } else if (subAction === 'delete_code') {
           await db.prepare(`DELETE FROM invite_codes WHERE code = ?`).bind(targetCode).run();
         }
@@ -277,7 +266,6 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ success: true }), { headers });
       }
 
-      // (E) 개인별 기업 풀 태그(✔, ✖, ■) 저장
       if (action === 'save_tag') {
         const { userId: uId, company, tag } = body;
         if (!uId || !company) return new Response(JSON.stringify({ error: '잘못된 요청' }), { status: 400, headers });
@@ -290,10 +278,9 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ success: true }), { headers });
       }
 
-      // (F) 기본: 채용 공고 등록/수정 및 내 개인 상태 저장
       const job = body;
       const historyStr = JSON.stringify(job.history || []);
-      const creatorName = job.createdBy || 'GH';
+      const creatorName = job.createdBy || '관리자';
 
       const existingJob = await db.prepare(`SELECT created_by, createdAt, status, appliedDate, memo FROM jobs WHERE id = ?`).bind(job.id).first();
       const finalCreator = (existingJob && existingJob.created_by) ? existingJob.created_by : creatorName;
@@ -334,7 +321,6 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({ success: true }), { headers });
     }
 
-    // ==================== [3. 삭제 (DELETE)] ====================
     if (method === 'DELETE') {
       const id = url.searchParams.get('id');
       if (id) {
