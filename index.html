@@ -1043,13 +1043,19 @@
           `).join('');
         }
 
-        // 그룹 필터 드롭다운 동적 생성 로직 (보완 완료)
+        // 그룹 필터 드롭다운 동적 생성 로직 (그룹별 인원수 표시)
         const filterSelect = document.getElementById('admin-group-filter');
         if (filterSelect) {
           const currentSelectedGroup = filterSelect.value;
           const uniqueGroups = [...new Set(cachedAdminUsers.map(u => u.group_name).filter(g => g && g.trim() !== ''))];
-          filterSelect.innerHTML = `<option value="">전체 그룹 보기 (${cachedAdminUsers.length}명)</option>` +
-            uniqueGroups.map(g => `<option value="${g}" ${currentSelectedGroup === g ? 'selected' : ''}>${g}</option>`).join('');
+          
+          let optionsHtml = `<option value="">전체 그룹 보기</option>`;
+          uniqueGroups.forEach(g => {
+            const groupCount = cachedAdminUsers.filter(u => u.group_name === g).length;
+            const isSelected = currentSelectedGroup === g ? 'selected' : '';
+            optionsHtml += `<option value="${g}" ${isSelected}>${g} (${groupCount}명)</option>`;
+          });
+          filterSelect.innerHTML = optionsHtml;
         }
 
         renderAdminUserTable();
