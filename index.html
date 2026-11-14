@@ -1719,7 +1719,7 @@
         filtered.sort((a, b) => getJobCategoryRank(a) - getJobCategoryRank(b));
       } else if (currentArchiveTab === 'all' && !selectedCompany) {
         filtered.sort((a, b) => (a.company || '').localeCompare(b.company || '', 'ko', { sensitivity: 'base' }));
-      } else if (currentArchiveTab === 'active') {
+      } else if (currentArchiveTab === 'active' || currentArchiveTab === 'interest' || currentArchiveTab === 'applied') {
         filtered.sort((a, b) => {
           const ddayA = getDDay(a.deadline), ddayB = getDDay(b.deadline);
           return ddayA.diff - ddayB.diff;
