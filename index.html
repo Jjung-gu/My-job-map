@@ -30,7 +30,6 @@
     #grp-nat-전라권 .puzzle-piece { fill: #fef08a; stroke: #ca8a04; }
     #grp-nat-경상권 .puzzle-piece { fill: #e9d5ff; stroke: #9333ea; }
 
-    /* 제주도, 울릉도, 독도 전용 고정 스타일 (클릭/호버 제외, 초록색 표시) */
     .island-piece {
       fill: #4ade80;
       stroke: #15803d;
@@ -1043,7 +1042,7 @@
           `).join('');
         }
 
-        // 그룹 필터 드롭다운 동적 생성 로직 (그룹별 인원수 표시)
+        // 그룹 필터 드롭다운 생성 (전체 보기 + 그룹별 인원수 표시)
         const filterSelect = document.getElementById('admin-group-filter');
         if (filterSelect) {
           const currentSelectedGroup = filterSelect.value;
@@ -1062,6 +1061,20 @@
         checkPendingUsersCount();
       } catch (e) {
         console.error("loadAdminData error:", e);
+      }
+    }
+
+    // 실시간 접속 상태 판별 뱃지 함수
+    function getOnlineStatusBadge(lastActiveStr) {
+      if (!lastActiveStr) return `<span class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-600 border border-red-200">🔴 오프라인</span>`;
+      
+      const activeTime = new Date(lastActiveStr.replace(' ', 'T') + (lastActiveStr.includes('Z') ? '' : 'Z'));
+      const diffMins = (Date.now() - activeTime.getTime()) / (1000 * 60);
+      
+      if (diffMins <= 3) {
+        return `<span class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">🟢 접속중</span>`;
+      } else {
+        return `<span class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-600 border border-red-200">🔴 오프라인</span>`;
       }
     }
 
@@ -1084,12 +1097,16 @@
         const isPending = u.status === 'pending';
         const isAdmin = u.role === 'admin';
         const lastLoginStr = u.last_login ? u.last_login.replace('T', ' ').slice(0, 16) : '기록 없음';
+        
         return `
           <tr class="${isPending ? 'bg-amber-50/60' : 'bg-white'}">
             <td class="py-2.5 px-3">
               ${isAdmin ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">👑 관리자</span>' : (isPending ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700">승인 대기</span>' : '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">활동 승인</span>')}
             </td>
-            <td class="py-2.5 px-3 font-bold text-slate-800">${u.nickname} <span class="font-normal text-slate-400">(${u.username})</span></td>
+            <td class="py-2.5 px-3 font-bold text-slate-800">
+              ${u.nickname} ${getOnlineStatusBadge(u.last_active)} 
+              <span class="font-normal text-slate-400">(${u.username})</span>
+            </td>
             <td class="py-2.5 px-3 text-slate-600">${u.group_name || '-'}</td>
             <td class="py-2.5 px-3 text-slate-500 font-mono text-[11px]">${lastLoginStr}</td>
             <td class="py-2.5 px-3 text-right">
