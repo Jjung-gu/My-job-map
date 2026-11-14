@@ -1,5 +1,5 @@
 // functions/api/jobs.js
-// 대소문자 무시 로그인 + 탈퇴 회원 실시간 접속 차단(세션 검증) + '관심' 상태 허용 버전
+// 대소문자 무시 로그인 + 탈퇴 회원 실시간 접속 차단 + 최종 접속일 기록 반영 버전
 
 const CORS_HEADERS = {
   "Content-Type": "application/json",
@@ -20,7 +20,8 @@ async function initMultiUserTables(db) {
       status TEXT DEFAULT 'pending',
       invite_code TEXT,
       group_name TEXT,
-      created_at TEXT
+      created_at TEXT,
+      last_login TEXT
     )`).run();
   } catch (e) {}
 
@@ -81,8 +82,9 @@ export async function onRequestGet(context) {
     }
 
     if (action === "admin_data") {
+      // 관리자 조회 시 last_login 컬럼 포함하여 반환
       const { results: users } = await db.prepare(
-        "SELECT id, username, nickname, role, status, invite_code, group_name, created_at FROM users"
+        "SELECT id, username, nickname, role, status, invite_code, group_name, created_at, last_login FROM users"
       ).all();
       const { results: codes } = await db.prepare(
         "SELECT * FROM invite_codes"
@@ -120,7 +122,6 @@ export async function onRequestGet(context) {
       if (!countsMap[row.job_id]) countsMap[row.job_id] = { interest: 0, applied: 0 };
       
       let s = row.status;
-      // '관심' 상태 허용 및 카운트 집계 반영
       if (s === "관심" || s === "서류작성중" || s === "서류작성") {
         countsMap[row.job_id].interest += 1;
       } else if (s === "지원완료" || s === "면접예정" || s === "최종합격" || s === "1차면접") {
@@ -203,6 +204,9 @@ export async function onRequestPost(context) {
         return new Response(JSON.stringify({ error: "접속 권한이 없는 계정입니다." }), { status: 403, headers: CORS_HEADERS });
       }
 
+      // 로그인 성공 시 현재 접속 시간을 last_login에 기록
+      await db.prepare("UPDATE users SET last_login = datetime('now', 'localtime') WHERE id = ?").bind(user.id).run();
+
       return new Response(JSON.stringify({
         user: { id: user.id, username: user.username, nickname: user.nickname, role: user.role, groupName: user.group_name }
       }), { headers: CORS_HEADERS });
@@ -284,8 +288,6 @@ export async function onRequestPost(context) {
     }
 
     const historyStr = JSON.stringify(data.history || []);
-    
-    // '관심' 상태 허용
     let cleanStatus = data.status || "";
 
     try {
