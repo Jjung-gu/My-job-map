@@ -1,5 +1,5 @@
 // functions/api/jobs.js
-// 대소문자 무시 로그인 + 탈퇴 회원 실시간 접속 차단 + 최종 접속일 기록 반영 버전
+// 실시간 접속 상태(last_active) 트래킹 포함 버전
 
 const CORS_HEADERS = {
   "Content-Type": "application/json",
@@ -21,9 +21,12 @@ async function initMultiUserTables(db) {
       invite_code TEXT,
       group_name TEXT,
       created_at TEXT,
-      last_login TEXT
+      last_login TEXT,
+      last_active TEXT
     )`).run();
   } catch (e) {}
+
+  try { await db.prepare("ALTER TABLE users ADD COLUMN last_active TEXT").run(); } catch(e) {}
 
   try {
     await db.prepare(`CREATE TABLE IF NOT EXISTS invite_codes (
@@ -79,12 +82,13 @@ export async function onRequestGet(context) {
           headers: CORS_HEADERS
         });
       }
+      // 활동 감지 시 last_active 갱신
+      try { await db.prepare("UPDATE users SET last_active = datetime('now') WHERE id = ?").bind(userId).run(); } catch (e) {}
     }
 
     if (action === "admin_data") {
-      // 관리자 조회 시 last_login 컬럼 포함하여 반환
       const { results: users } = await db.prepare(
-        "SELECT id, username, nickname, role, status, invite_code, group_name, created_at, last_login FROM users"
+        "SELECT id, username, nickname, role, status, invite_code, group_name, created_at, last_login, last_active FROM users"
       ).all();
       const { results: codes } = await db.prepare(
         "SELECT * FROM invite_codes"
@@ -204,8 +208,8 @@ export async function onRequestPost(context) {
         return new Response(JSON.stringify({ error: "접속 권한이 없는 계정입니다." }), { status: 403, headers: CORS_HEADERS });
       }
 
-      // 로그인 성공 시 현재 접속 시간을 last_login에 기록
-      await db.prepare("UPDATE users SET last_login = datetime('now', 'localtime') WHERE id = ?").bind(user.id).run();
+      // 로그인 성공 시 last_login 및 last_active 기록
+      await db.prepare("UPDATE users SET last_login = datetime('now', 'localtime'), last_active = datetime('now') WHERE id = ?").bind(user.id).run();
 
       return new Response(JSON.stringify({
         user: { id: user.id, username: user.username, nickname: user.nickname, role: user.role, groupName: user.group_name }
@@ -273,6 +277,7 @@ export async function onRequestPost(context) {
         if (!checkU || checkU.status !== "approved") {
           return new Response(JSON.stringify({ error: "SESSION_INVALID" }), { status: 401, headers: CORS_HEADERS });
         }
+        try { await db.prepare("UPDATE users SET last_active = datetime('now') WHERE id = ?").bind(uId).run(); } catch(e) {}
       }
       if (!tag) await db.prepare("DELETE FROM user_company_tags WHERE user_id = ? AND company = ?").bind(uId, company).run();
       else await db.prepare("INSERT OR REPLACE INTO user_company_tags (user_id, company, tag) VALUES (?, ?, ?)").bind(uId, company, tag).run();
@@ -285,6 +290,7 @@ export async function onRequestPost(context) {
       if (!checkU || checkU.status !== "approved") {
         return new Response(JSON.stringify({ error: "SESSION_INVALID" }), { status: 401, headers: CORS_HEADERS });
       }
+      try { await db.prepare("UPDATE users SET last_active = datetime('now') WHERE id = ?").bind(data.userId).run(); } catch(e) {}
     }
 
     const historyStr = JSON.stringify(data.history || []);
